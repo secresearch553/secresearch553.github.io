@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GPG Bypass | zdaylabs</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%237c9cff%27/%3E%3Ctext x=%2716%27 y=%2723%27 font-size=%2720%27 font-weight=%27800%27 text-anchor=%27middle%27 fill=%27%23090b10%27 font-family=%27sans-serif%27%3EZ%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <meta name="theme-color" content="#090b10">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="index.html" aria-label="ZDaylabs home"><span class="brand-mark" aria-hidden="true">Z</span>ZDaylabs</a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Toggle navigation"><span></span></button>
+    <nav class="site-nav" id="site-nav" aria-label="Primary">
+      <a href="index.html">Home</a>
+      <a href="blogs.html">Blogs</a>
+      <a href="research.html">Research</a>
+      <a href="policy.html">Disclosure</a>
+      <a href="contact.html">Contact</a>
+      <span class="nav-social">
+        <a href="https://www.linkedin.com/in/swagatkumar/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+        <a href="https://x.com/webspl01t3r" target="_blank" rel="noopener noreferrer">X</a>
+      </span>
+    </nav>
+  </div>
+</header>
+
+
+  <main id="main" class="article">
+    <h1>GPG Bypass</h1>
+
+    <p>
+        I'll describe a GPG bypass technique I discovered during a penetration test and show how I used it to bypass a filter and gain code execution.
+    </p>
+    
+    <h2>What is GPG?</h2>
+    <p>
+        GPG (GNU Privacy Guard) is a replacement for PGP. It's a software binary that supports encrypting files using both symmetric and asymmetric cryptography.
+    </p>
+    
+    <h2>How GPG works</h2>
+    <p>
+        GPG uses public-key encryption. You generate GPG keys with the <code>gpg</code> binary and use those keys to encrypt files. You share the public key so others can verify the file and keep the private key to decrypt it.
+    </p>
+    
+    <h2>Example</h2>
+    <p><img src="images/gpgbypass/image1.webp" alt="GPG key generation example"></p>
+    <p>
+        As you can see, we generated GPG keys and used them to encrypt and decrypt files as described above.
+    </p>
+    
+    <h2>How the decryption works</h2>
+    <p>
+        Once you receive an encrypted file, you can use the <code>gpg</code> binary to decrypt it like this:
+    </p>
+    <p><img src="images/gpgbypass/image2.webp" alt="GPG decrypt example"></p>
+    <p><img src="images/gpgbypass/image3.webp" alt="GPG decrypt output"></p>
+    
+    <p><em><strong>The question is: how is GPG being used as a filter?</strong></em></p>
+    <p>
+        Think of a software upgrade feature. For example, an application like OpManager (Zoho) may support upgrades that come as a bundle file.
+    </p>
+    <ul>
+        <li>Download the upgrade pack</li>
+        <li>SSH into the box</li>
+        <li>Run the OpManager upgrade script and pass the upgrade file location</li>
+        <li>Some applications even allow uploads of the upgrade bundle via the web UI</li>
+    </ul>
+    
+    <p>
+        The application asks for an upgrade bundle and either downloads necessary files from an upgrade server and overwrites files, or the bundle itself contains the files to overwrite.
+    </p>
+    <p>
+        Such upgrade functionality can be exploited for Arbitrary File Write (AFW) if proper checks are not in place.
+    </p>
+    
+    <p>
+        To defend against this, applications often accept an encrypted bundle. The keys to decrypt that bundle are either present on the filesystem or downloaded on demand, and are usually instance-specific.
+    </p>
+    
+    <h2>Check out the code below</h2>
+    <p><img src="images/gpgbypass/image4.webp" alt="Code snippet using gpg binary"></p>
+    <p>
+        If you inspect the code above, it uses the <code>gpg</code> binary to verify and decrypt the file.
+    </p>
+    <p>
+        You might notice there is no <code>--decrypt</code> flag specified — so how does it decrypt?
+    </p>
+    <p>
+        Good catch, but not enough. When you pass an encrypted file to <code>gpg</code>, even if you don't supply <code>--decrypt</code>, GPG will try to guess the intended operation. Since you typically won't have the required keys on that system, the decryption normally fails.
+    </p>
+    
+    <p>
+        Look at what happens when you run the command on a terminal:
+    </p>
+    <p><img src="images/gpgbypass/image5.webp" alt="GPG terminal output"></p>
+    <p>
+        The first line says: <em>No command supplied, trying to guess what you mean...</em>
+    </p>
+    <p>
+        That means if you can fool GPG into thinking the file is not an encrypted message but a normal GPG-storable file, GPG will “recover” the embedded data and output the original file — which the upgrade process will then use.
+    </p>
+    
+    <h2>The <code>--store</code> flag</h2>
+    <p>
+        While reading the <code>gpg</code> man page I found the <code>--store</code> flag, which creates a valid GPG file but does not involve any keys.
+    </p>
+    <p>
+        If I craft the bundle to include a stored (not-encrypted) GPG object and pass it to the application, the filter gets satisfied and the bundle is accepted — allowing my files to overwrite files on the filesystem.
+    </p>
+    
+    <p>
+        To demonstrate, I spawned a VM, created an encrypted file there, and tried to decrypt it on the target VM.
+    </p>
+    <p><img src="images/gpgbypass/image6.webp" alt="VM encrypt on source"></p>
+    <p><img src="images/gpgbypass/image7.webp" alt="Decryption attempt with mismatched keys"></p>
+    <p>
+        As you can see, the file failed verification because the keys were different.
+    </p>
+    
+    <p>Now let's apply the trick:</p>
+    <p><img src="images/gpgbypass/image8.webp" alt="Applying --store trick"></p>
+    <p><img src="images/gpgbypass/image9.webp" alt="Stored file accepted"></p>
+    <p>
+        The file is verified and the underlying text file is recovered and saved to the location we specified.
+    </p>
+    <p><img src="images/gpgbypass/image10.gif" alt="Proof of concept GIF"></p>
+    
+    <p>
+        Using this technique, I can craft a bundle that results in Arbitrary File Write and therefore lead to RCE. There are many ways to achieve RCE from AFW: overwrite cron jobs, replace application binaries, drop web shells in the webroot, or overwrite scripts that are later executed by APIs or scheduled tasks.
+    </p>
+    
+    <p><em><strong>Note:</strong> This technique is not limited to software upgrades — it can apply to backup restores and other flows. If AFW is not achievable, consider trying for file disclosure via symlink attacks.</em></p>
+    
+    <p>That's it for today. Thanks for reading — happy hacking.</p>
+    
+    <p>Connect with me:</p>
+    <p><a href="https://www.linkedin.com/in/swagatkumar/">LinkedIn</a></p>
+    <p><a href="https://x.com/webspl01t3r">Twitter</a></p>
+    
+  </main>
+<footer class="site-footer">
+  <div class="footer-inner">
+    <span>&copy; 2025 ZDaylabs. We exploit, analyze, and document.</span>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="research.html">Research</a>
+      <a href="blogs.html">Blogs</a>
+      <a href="policy.html">Disclosure policy</a>
+      <a href="https://github.com/w3bspl01t3r" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </nav>
+  </div>
+</footer>
+<script src="navigation.js" defer></script>
+</body>
+</html>

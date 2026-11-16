@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CommonsCollection2 | zdaylabs</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%237c9cff%27/%3E%3Ctext x=%2716%27 y=%2723%27 font-size=%2720%27 font-weight=%27800%27 text-anchor=%27middle%27 fill=%27%23090b10%27 font-family=%27sans-serif%27%3EZ%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <meta name="theme-color" content="#090b10">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="index.html" aria-label="ZDaylabs home"><span class="brand-mark" aria-hidden="true">Z</span>ZDaylabs</a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Toggle navigation"><span></span></button>
+    <nav class="site-nav" id="site-nav" aria-label="Primary">
+      <a href="index.html">Home</a>
+      <a href="blogs.html">Blogs</a>
+      <a href="research.html">Research</a>
+      <a href="policy.html">Disclosure</a>
+      <a href="contact.html">Contact</a>
+      <span class="nav-social">
+        <a href="https://www.linkedin.com/in/swagatkumar/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+        <a href="https://x.com/webspl01t3r" target="_blank" rel="noopener noreferrer">X</a>
+      </span>
+    </nav>
+  </div>
+</header>
+
+
+  <main id="main" class="article">
+    <h1>CommonsBeanUtils1</h1>
+
+    <p>
+      If you’re reading this for the first time, I’d recommend going through the
+      <span class="highlight">CommonsCollections</span> blogs first and then coming back here.
+      This series is built on top of the CommonsCollections series.
+    </p>
+
+    <p>
+      In this blog post we’ll discuss the <span class="highlight">CommonsBeanUtils1</span> gadget:
+      <span class="accent">how it works</span>, <span class="accent">why the dependencies matter</span>,
+      and we’ll wrap up with a <span class="accent">safe</span> “local lab” discussion (non-operational)
+      to show the control flow end-to-end.
+    </p>
+
+    <div class="warn">
+      <strong>Safety note:</strong> This post intentionally avoids publishing weaponizable exploit code
+      (for example, deserialization payloads that execute OS commands). The goal here is to explain
+      the mechanics and the defensive implications.
+    </div>
+
+    <h2>Quick refresher: CommonsCollections2 control flow</h2>
+
+    <p>
+      For refresher, CommonsCollections2 is commonly described with a control-flow chain like:
+    </p>
+
+    <pre><code>PriorityQueue.readObject()
+  → PriorityQueue.heapify()
+    → PriorityQueue.siftDown(...)
+      → Comparator.compare(...)
+        → (Comparator-specific logic)
+          → TemplatesImpl.newTransformer()
+            → loads attacker-controlled bytecode (if present)</code></pre>
+
+    <p>
+      The key learning: <span class="highlight">PriorityQueue deserialization</span> re-orders elements
+      during <code>readObject()</code>, and if a non-null comparator exists, it will be invoked while
+      heapifying.
+    </p>
+
+    <h2>CommonsBeanUtils1: what changes at a high level?</h2>
+
+    <p>
+      CommonsBeanUtils1 is conceptually very similar to CC2 in that it leverages:
+      <span class="highlight">PriorityQueue</span> + a <span class="highlight">Comparator</span>,
+      and reaches a sensitive method on a JDK/Xalan class (often described as <code>TemplatesImpl</code>).
+    </p>
+
+    <p>
+      The main change is: instead of a comparator that transforms objects via an
+      “invoker-style” transformer, this gadget uses <span class="highlight">BeanComparator</span>.
+    </p>
+
+    <pre><code>PriorityQueue.readObject()
+  → PriorityQueue.heapify()
+    → PriorityQueue.siftDown(...)
+      → BeanComparator.compare(...)
+        → property resolution via PropertyUtils.getProperty(...)
+          → getter resolution via JavaBeans Introspector
+            → (sensitive method reachable in vulnerable configurations)</code></pre>
+
+    <div class="note">
+      <strong>Note:</strong> If you’re unsure why passing a comparator matters, revisit the CC2 post:
+      the moment <code>PriorityQueue</code> heapifies during deserialization, it will call
+      <code>compare()</code> on the comparator.
+    </div>
+
+    <h2>Deep dive: BeanComparator.compare()</h2>
+
+    <p>
+      When we initialize a BeanComparator like:
+    </p>
+
+    <pre><code>BeanComparator bc = new BeanComparator("outputProperties");</code></pre>
+
+    <p>
+      It sets two important fields:
+    </p>
+
+    <ul>
+      <li><code>property</code> gets set (e.g., <code>"outputProperties"</code>).</li>
+      <li>
+        <code>comparator</code> is set to a default comparable comparator if not supplied.
+        (This is where transitive dependencies can come into play.)
+      </li>
+    </ul>
+
+    <p>
+      Inside <code>compare(o1, o2)</code>, when <code>property</code> is non-null, it resolves:
+    </p>
+
+    <pre><code>value1 = PropertyUtils.getProperty(o1, property);
+value2 = PropertyUtils.getProperty(o2, property);
+return internalCompare(value1, value2);</code></pre>
+
+    <p>
+      The critical part is <code>PropertyUtils.getProperty</code>. Because you control:
+    </p>
+    <ul>
+      <li><code>o1</code>/<code>o2</code> (objects placed into the queue), and</li>
+      <li><code>property</code> (the string passed to the comparator),</li>
+    </ul>
+    <p>
+      you influence which getter method is discovered and invoked through the JavaBeans
+      introspection process (property descriptors, read methods, etc.).
+    </p>
+
+    <h3>How property resolution works (conceptually)</h3>
+
+    <p>
+      For simple properties (not nested like <code>a.b.c</code>), the resolution typically:
+    </p>
+
+    <ol>
+      <li>Creates/uses introspection data for the target class.</li>
+      <li>Finds a matching property descriptor for the supplied property name.</li>
+      <li>Extracts a read method (getter) from the descriptor.</li>
+      <li>Invokes the read method reflectively.</li>
+    </ol>
+
+    <p>
+      That’s why a property name like <code>outputProperties</code> maps to a getter like
+      <code>getOutputProperties()</code> when present and compatible with JavaBeans rules.
+    </p>
+
+    <h2>“Quick Question” section (safe answer)</h2>
+
+    <p><strong>Q:</strong> “Where do we send <code>getOutputProperties()</code> to invokeMethod?”</p>
+    <p>
+      In JavaBeans-style introspection, you usually don’t pass the method directly. You fetch a
+      <span class="highlight">PropertyDescriptor</span>, then call something like
+      <code>getReadMethod()</code> on it to obtain the getter method, and only then invoke it.
+      So the “method reference” is derived from metadata, not hard-coded.
+    </p>
+
+    <h2>Dependencies: why three jars show up in many writeups</h2>
+
+    <h3>1) commons-logging</h3>
+    <p>
+      Commons Logging is often a compile/runtime dependency of BeanUtils.
+      In many environments, BeanUtils may throw errors if it cannot find commons-logging on the
+      classpath, even if logging isn’t directly involved in the gadget chain.
+    </p>
+
+    <h3>2) commons-collections</h3>
+    <p>
+      Some BeanComparator constructors or defaults can reference comparator utilities that live in
+      Commons Collections. In some cases, this dependency is <em>incidental</em> to the chain and can be
+      replaced by supplying your own comparator (as long as it’s compatible and serializable where needed).
+    </p>
+
+    <h3>3) commons-beanutils</h3>
+    <p>
+      This is the core library providing BeanComparator/PropertyUtils property resolution logic.
+    </p>
+
+    <div class="note">
+      <strong>Defensive takeaway:</strong> A “not used directly” dependency can still matter because
+      it changes what classes are available at runtime and what defaults get selected. Always model the
+      full classpath when assessing deserialization risk.
+    </div>
+
+    <h2>Defensive checklist: how to reduce risk</h2>
+
+    <ul>
+      <li><strong>Disable Java native deserialization</strong> for untrusted data wherever possible.</li>
+      <li>
+        Use an <strong>allowlist-based ObjectInputFilter</strong> (JEP 290) to restrict classes during
+        deserialization.
+      </li>
+      <li>
+        <strong>Remove unused libraries</strong> (BeanUtils / Collections / Xalan) from server classpaths
+        when not required.
+      </li>
+      <li>
+        <strong>Patch/upgrade</strong> libraries and runtimes, and track known gadget-bearing versions.
+      </li>
+      <li>
+        Add detections: look for suspicious deserialization entry points and unexpected
+        <code>PriorityQueue</code>/<code>Comparator</code> usage patterns.
+      </li>
+    </ul>
+
+    <h4>Summary</h4>
+    <ul>
+      <li><code>CommonsBeanUtils1</code> follows the same deserialization “entry point” pattern as CC2: <code>PriorityQueue.readObject()</code> triggers heap operations.</li>
+      <li>The comparator’s <code>compare()</code> is invoked during heapify/sift-down, making comparators powerful gadget primitives.</li>
+      <li><code>BeanComparator</code> resolves a property name into a getter call via JavaBeans introspection (<code>PropertyDescriptor</code> → <code>getReadMethod()</code> → reflective invoke).</li>
+      <li>Some dependencies appear due to transitive/default behaviors (logging / default comparators), even if not central to the vulnerable control flow.</li>
+      <li>Best defense is to avoid deserializing untrusted data and enforce strict class filtering (JEP 290).</li>
+    </ul>
+
+    <p>Thats it for Today.</p>
+    <p>Thanks For Reading.</p>
+    <p>Happy Hacking (responsibly).</p>
+    <p>You can connect with me at:</p>
+    <p><a href="https://www.linkedin.com/in/swagatkumar/">Linkedin</a></p>
+    <p><a href="https://x.com/webspl01t3r">Twitter</a></p>
+
+  </main>
+<footer class="site-footer">
+  <div class="footer-inner">
+    <span>&copy; 2025 ZDaylabs. We exploit, analyze, and document.</span>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="research.html">Research</a>
+      <a href="blogs.html">Blogs</a>
+      <a href="policy.html">Disclosure policy</a>
+      <a href="https://github.com/w3bspl01t3r" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </nav>
+  </div>
+</footer>
+<script src="navigation.js" defer></script>
+</body>
+</html>
